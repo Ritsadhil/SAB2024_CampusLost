@@ -73,7 +73,7 @@ class _BerandaScreenState extends State<BerandaScreen> {
         ),
       ),
       // Bottom navigation
-      bottomNavigationBar: _buildBottomNav(),
+//      bottomNavigationBar: _buildBottomNav(),
     );
   }
 

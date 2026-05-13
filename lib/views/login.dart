@@ -4,6 +4,7 @@ import '../theme/widgets.dart';
 import 'register.dart';
 import 'forgot_password.dart';
 import 'beranda.dart';
+import 'main_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -19,15 +20,21 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _rememberMe = false;
   bool _isLoading = false;
 
-  void _login() async {
-    // Temporary: Navigate directly without validation (as per requirements)
-    setState(() => _isLoading = true);
-    await Future.delayed(const Duration(seconds: 1));
-    if (mounted) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const BerandaScreen()),
-      );
-    }
+  // void _login() async {
+  //   // Temporary: Navigate directly without validation (as per requirements)
+  //   setState(() => _isLoading = true);
+  //   await Future.delayed(const Duration(seconds: 1));
+  //   if (mounted) {
+  //     Navigator.of(context).pushReplacement(
+  //       MaterialPageRoute(builder: (_) => const MainScreen()),
+  //     );
+  //   }
+  // }
+
+  void _login() {
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => const MainScreen()), // Ubah ke MainScreen
+    );
   }
 
   @override
