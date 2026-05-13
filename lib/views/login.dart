@@ -20,22 +20,18 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _rememberMe = false;
   bool _isLoading = false;
 
-  // void _login() async {
-  //   // Temporary: Navigate directly without validation (as per requirements)
-  //   setState(() => _isLoading = true);
-  //   await Future.delayed(const Duration(seconds: 1));
-  //   if (mounted) {
-  //     Navigator.of(context).pushReplacement(
-  //       MaterialPageRoute(builder: (_) => const MainScreen()),
-  //     );
-  //   }
-  // }
-
-  void _login() {
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const MainScreen()), // Ubah ke MainScreen
-    );
+  void _login() async {
+    // Temporary: Navigate directly without validation (as per requirements)
+    setState(() => _isLoading = true);
+    await Future.delayed(const Duration(seconds: 1));
+    if (mounted) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const MainScreen()),
+      );
+    }
   }
+
+
 
   @override
   void dispose() {
