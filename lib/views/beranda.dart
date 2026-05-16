@@ -1,5 +1,12 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import '../services/app_service.dart';
+import 'profile.dart';
+import 'search.dart';
+import 'my_reports.dart';
+import 'report_lost.dart';
+import 'report_found.dart';
+import 'detail_item.dart';
 
 class BerandaScreen extends StatefulWidget {
   const BerandaScreen({super.key});
@@ -38,42 +45,35 @@ class _BerandaScreenState extends State<BerandaScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.background,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Header dengan logo dan notifikasi
-            _buildHeader(),
+      body: _buildContent(context),
+      bottomNavigationBar: _buildBottomNav(context),
+    );
+  }
 
-            // Main content
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Greeting
-                    _buildGreeting(),
-                    const SizedBox(height: 24),
-
-                    // Report cards
-                    _buildReportCards(),
-                    const SizedBox(height: 28),
-
-                    // Category filter
-                    _buildCategoryFilter(),
-                    const SizedBox(height: 20),
-
-                    // Latest reports section
-                    _buildLatestReports(),
-                  ],
-                ),
+  Widget _buildContent(BuildContext context) {
+    return SafeArea(
+      child: Column(
+        children: [
+          _buildHeader(),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildGreeting(),
+                  const SizedBox(height: 24),
+                  _buildReportCards(context),
+                  const SizedBox(height: 28),
+                  _buildCategoryFilter(),
+                  const SizedBox(height: 20),
+                  _buildLatestReports(context),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
-      // Bottom navigation
-      bottomNavigationBar: _buildBottomNav(),
     );
   }
 
@@ -144,14 +144,17 @@ class _BerandaScreenState extends State<BerandaScreen> {
     );
   }
 
-  Widget _buildReportCards() {
+  Widget _buildReportCards(BuildContext context) {
     return Row(
       children: [
         // Card: Lapor Barang Hilang
         Expanded(
           child: GestureDetector(
             onTap: () {
-              // TODO: Navigate to report lost item
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ReportLostScreen()),
+              );
             },
             child: Container(
               decoration: BoxDecoration(
@@ -202,7 +205,10 @@ class _BerandaScreenState extends State<BerandaScreen> {
         Expanded(
           child: GestureDetector(
             onTap: () {
-              // TODO: Navigate to report found item
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ReportFoundScreen()),
+              );
             },
             child: Container(
               decoration: BoxDecoration(
@@ -298,7 +304,7 @@ class _BerandaScreenState extends State<BerandaScreen> {
     );
   }
 
-  Widget _buildLatestReports() {
+  Widget _buildLatestReports(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -315,7 +321,10 @@ class _BerandaScreenState extends State<BerandaScreen> {
             ),
             GestureDetector(
               onTap: () {
-                // TODO: Navigate to view all reports
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const MyReportsScreen()),
+                );
               },
               child: const Text(
                 'Lihat Semua',
@@ -329,7 +338,6 @@ class _BerandaScreenState extends State<BerandaScreen> {
           ],
         ),
         const SizedBox(height: 12),
-        // List of reports
         Column(
           children: List.generate(
             reports.length,
@@ -339,7 +347,17 @@ class _BerandaScreenState extends State<BerandaScreen> {
                 padding: EdgeInsets.only(
                   bottom: index < reports.length - 1 ? 12 : 0,
                 ),
-                child: _buildReportCard(report),
+                child: GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => DetailItemScreen(reportId: report['id'] as String),
+                      ),
+                    );
+                  },
+                  child: _buildReportCard(report),
+                ),
               );
             },
           ),
@@ -468,7 +486,7 @@ class _BerandaScreenState extends State<BerandaScreen> {
     );
   }
 
-  Widget _buildBottomNav() {
+  Widget _buildBottomNav(BuildContext context) {
     final navItems = [
       {'icon': Icons.home_rounded, 'label': 'Beranda'},
       {'icon': Icons.search_rounded, 'label': 'Cari'},
@@ -494,7 +512,33 @@ class _BerandaScreenState extends State<BerandaScreen> {
             final item = navItems[index];
             final isSelected = _currentNavIndex == index;
             return GestureDetector(
-              onTap: () => setState(() => _currentNavIndex = index),
+              onTap: () {
+                setState(() => _currentNavIndex = index);
+                // Navigate to respective screen
+                switch (index) {
+                  case 0:
+                    // Already on Beranda, do nothing
+                    break;
+                  case 1:
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const SearchScreen()),
+                    );
+                    break;
+                  case 2:
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const MyReportsScreen()),
+                    );
+                    break;
+                  case 3:
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                    );
+                    break;
+                }
+              },
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 child: Column(
