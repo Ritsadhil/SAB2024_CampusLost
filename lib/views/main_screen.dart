@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'beranda.dart';
-import 'my_reports_screen.dart';
-import 'profile_screen.dart';
+import 'my_reports.dart';
+import 'profile.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
