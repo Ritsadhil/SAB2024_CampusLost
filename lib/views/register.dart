@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../theme/widgets.dart';
 import 'login.dart';
+import '../services/auth_service.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -19,6 +20,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String? _selectedFakultas;
   bool _isLoading = false;
 
+  final AuthService _authService = AuthService();
   final List<String> _fakultasList = [
     'Teknik Informatika',
     'Sistem Informasi',
@@ -41,9 +43,54 @@ class _RegisterScreenState extends State<RegisterScreen> {
       );
       return;
     }
+
+    if (_passCtrl.text != _confirmPassCtrl.text) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Password dan Konfirmasi Password tidak cocok!'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
-    await Future.delayed(const Duration(seconds: 2));
-    if (mounted) setState(() => _isLoading = false);
+
+    try {
+      // Mengirim data pendaftaran ke Firebase
+      await _authService.registerWithEmail(
+        email: _emailCtrl.text.trim(),
+        password: _passCtrl.text.trim(),
+      );
+
+      // Bagian ini sekarang sudah benar berada di dalam blok try
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Registrasi berhasil! Silakan masuk dengan akun baru Anda.'),
+            backgroundColor: Colors.green, // Warna hijau tanda sukses
+          ),
+        );
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+        );
+      }
+    } catch (e) {
+      // Jika error (misal email sudah terdaftar), munculkan notifikasi merah
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString()),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      // Matikan animasi loading
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override

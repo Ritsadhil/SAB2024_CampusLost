@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "867112837411",
+    "project_id": "campuslostapp-9752e",
+    "storage_bucket": "campuslostapp-9752e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:867112837411:android:1156cd0b8d26173c4dec96",
+        "android_client_info": {
+          "package_name": "com.penacode.campuslost"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBhpK_yEirwQmShHK8lb1LwKmiQJqn5JR4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
