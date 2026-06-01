@@ -7,6 +7,7 @@ import 'my_reports.dart';
 import 'report_lost.dart';
 import 'report_found.dart';
 import 'detail_item.dart';
+import 'inbox_screen.dart';
 
 class BerandaScreen extends StatefulWidget {
   const BerandaScreen({super.key});
@@ -46,7 +47,7 @@ class _BerandaScreenState extends State<BerandaScreen> {
     return Scaffold(
       backgroundColor: AppTheme.background,
       body: _buildContent(context),
-      bottomNavigationBar: _buildBottomNav(context),
+     // bottomNavigationBar: _buildBottomNav(context),
     );
   }
 
@@ -74,7 +75,7 @@ class _BerandaScreenState extends State<BerandaScreen> {
           ),
         ],
       ),
-      bottomNavigationBar: _buildBottomNav(context),
+     // bottomNavigationBar: _buildBottomNav(context),
     );
   }
 
@@ -114,7 +115,12 @@ class _BerandaScreenState extends State<BerandaScreen> {
               color: AppTheme.textGrey,
               size: 24,
             ),
-            onPressed: () {},
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const InboxScreen()),
+              );
+            },
           ),
         ],
       ),

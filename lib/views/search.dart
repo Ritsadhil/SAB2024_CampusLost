@@ -46,10 +46,11 @@ class _SearchScreenState extends State<SearchScreen> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: AppTheme.textDark),
-          onPressed: () => Navigator.pop(context),
-        ),
+        automaticallyImplyLeading: false,
+        // leading: IconButton(
+        //   icon: const Icon(Icons.arrow_back_rounded, color: AppTheme.textDark),
+        //   onPressed: () => Navigator.pop(context),
+        // ),
         title: const Text(
           'Cari Barang',
           style: TextStyle(
