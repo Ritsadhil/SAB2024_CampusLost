@@ -43,3 +43,10 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Windows build artifacts
+/windows/flutter/ephemeral/
+/windows/runner/Debug/
+/windows/runner/Release/
+/windows/runner/MinSizeRel/
+/windows/runner/RelWithDebInfo/
