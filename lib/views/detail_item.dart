@@ -39,6 +39,37 @@ class _DetailItemScreenState extends State<DetailItemScreen> {
     return Colors.grey;
   }
 
+  Widget _buildSection(String title, String content, {IconData? icon}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textDark)),
+        const SizedBox(height: 8),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: AppTheme.inputBorder),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (icon != null) ...[
+                Icon(icon, size: 18, color: AppTheme.primary),
+                const SizedBox(width: 10),
+              ],
+              Expanded(
+                child: Text(content, style: const TextStyle(fontSize: 13, color: AppTheme.textDark, height: 1.5)),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<Map<String, dynamic>?>(
@@ -73,158 +104,124 @@ class _DetailItemScreenState extends State<DetailItemScreen> {
         }
 
         final data = snapshot.data!;
-        return _buildDetailScreen(data);
+        final title = data['itemName'] ?? 'Barang Tanpa Nama';
+        final category = data['category'] ?? 'Lainnya';
+        final location = data['location'] ?? 'Lokasi tidak diketahui';
+        final status = data['status'] ?? 'HILANG';
+        final description = data['publicDescription'] ?? 'Tidak ada deskripsi';
+        final createdAt = data['createdAt'] as Timestamp?;
+        final statusColor = _getStatusColor(status);
+
+        return Scaffold(
+          backgroundColor: AppTheme.background,
+          appBar: AppBar(
+            backgroundColor: Colors.white,
+            elevation: 0,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back_rounded, color: AppTheme.textDark),
+              onPressed: () => Navigator.pop(context),
+            ),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.share_rounded, color: AppTheme.primary),
+                onPressed: () {},
+              ),
+            ],
+          ),
+          body: SafeArea(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: double.infinity,
+                    height: 250,
+                    color: AppTheme.inputFill,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Icon(Icons.image_outlined, size: 80, color: AppTheme.textGrey.withValues(alpha: 0.3)),
+                        Positioned(
+                          top: 16,
+                          right: 16,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: statusColor,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              status,
+                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: AppTheme.textDark)),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Icon(Icons.local_offer_outlined, size: 14, color: AppTheme.textGrey),
+                            const SizedBox(width: 6),
+                            Text(category, style: const TextStyle(fontSize: 13, color: AppTheme.textGrey)),
+                            const Spacer(),
+                            Icon(Icons.access_time_rounded, size: 14, color: AppTheme.textGrey),
+                            const SizedBox(width: 6),
+                            Text(_formatTimeAgo(createdAt), style: const TextStyle(fontSize: 13, color: AppTheme.textGrey)),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        _buildSection('Deskripsi', description),
+                        const SizedBox(height: 20),
+                        _buildSection('Lokasi', location, icon: Icons.location_on_outlined),
+                        const SizedBox(height: 20),
+                        _buildSection('Informasi Pelapor', 'Identitas disembunyikan untuk privasi', icon: Icons.person_outline_rounded),
+                        const SizedBox(height: 24),
+                        if (status == 'DITEMUKAN')
+                          AppButton(
+                            text: 'Hubungi Pelapor',
+                            onPressed: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Menghubungi pelapor...')),
+                              );
+                            },
+                          )
+                        else
+                          AppButton(
+                            text: 'Saya Menemukan Barang Ini',
+                            onPressed: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Laporan dikirim ke pelapor')),
+                              );
+                            },
+                          ),
+                        const SizedBox(height: 12),
+                        OutlinedButton(
+                          onPressed: () {},
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size(double.infinity, 50),
+                            foregroundColor: Colors.orange,
+                            side: const BorderSide(color: Colors.orange),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          child: const Text('Laporkan'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
       },
     );
   }
-
-  Widget _buildSection(String title, String content, {IconData? icon}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textDark)),
-        const SizedBox(height: 8),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: AppTheme.inputBorder),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (icon != null) ...[
-                Icon(icon, size: 18, color: AppTheme.primary),
-                const SizedBox(width: 10),
-              ],
-              Expanded(
-                child: Text(content, style: const TextStyle(fontSize: 13, color: AppTheme.textDark, height: 1.5)),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
 }
-  Widget _buildDetailScreen(Map<String, dynamic> data) {
-    final title = data['itemName'] ?? 'Barang Tanpa Nama';
-    final category = data['category'] ?? 'Lainnya';
-    final location = data['location'] ?? 'Lokasi tidak diketahui';
-    final status = data['status'] ?? 'HILANG';
-    final description = data['publicDescription'] ?? 'Tidak ada deskripsi';
-    final createdAt = data['createdAt'] as Timestamp?;
-    final statusColor = _getStatusColor(status);
-
-    return Scaffold(
-      backgroundColor: AppTheme.background,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: AppTheme.textDark),
-          onPressed: () => Navigator.pop(context),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.share_rounded, color: AppTheme.primary),
-            onPressed: () {},
-          ),
-        ],
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: double.infinity,
-                height: 250,
-                color: AppTheme.inputFill,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    Icon(Icons.image_outlined, size: 80, color: AppTheme.textGrey.withValues(alpha: 0.3)),
-                    Positioned(
-                      top: 16,
-                      right: 16,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: statusColor,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          status,
-                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: AppTheme.textDark)),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Icon(Icons.local_offer_outlined, size: 14, color: AppTheme.textGrey),
-                        const SizedBox(width: 6),
-                        Text(category, style: const TextStyle(fontSize: 13, color: AppTheme.textGrey)),
-                        const Spacer(),
-                        Icon(Icons.access_time_rounded, size: 14, color: AppTheme.textGrey),
-                        const SizedBox(width: 6),
-                        Text(_formatTimeAgo(createdAt), style: const TextStyle(fontSize: 13, color: AppTheme.textGrey)),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    _buildSection('Deskripsi', description),
-                    const SizedBox(height: 20),
-                    _buildSection('Lokasi', location, icon: Icons.location_on_outlined),
-                    const SizedBox(height: 20),
-                    _buildSection('Informasi Pelapor', 'Identitas disembunyikan untuk privasi', icon: Icons.person_outline_rounded),
-                    const SizedBox(height: 24),
-                    if (status == 'DITEMUKAN')
-                      AppButton(
-                        text: 'Hubungi Pelapor',
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Menghubungi pelapor...')),
-                          );
-                        },
-                      )
-                    else
-                      AppButton(
-                        text: 'Saya Menemukan Barang Ini',
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Laporan dikirim ke pelapor')),
-                          );
-                        },
-                      ),
-                    const SizedBox(height: 12),
-                    OutlinedButton(
-                      onPressed: () {},
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size(double.infinity, 50),
-                        foregroundColor: Colors.orange,
-                        side: const BorderSide(color: Colors.orange),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      child: const Text('Laporkan'),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
