@@ -3,6 +3,7 @@ import '../theme/app_theme.dart';
 import '../services/app_service.dart';
 import '../models/report_model.dart';
 import 'detail_item.dart';
+import 'package:intl/intl.dart';
 
 class MyReportsScreen extends StatefulWidget {
   const MyReportsScreen({super.key});
@@ -23,10 +24,11 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: AppTheme.textDark),
-          onPressed: () => Navigator.pop(context),
-        ),
+        automaticallyImplyLeading: false,
+        // leading: IconButton(
+        //   icon: const Icon(Icons.arrow_back_rounded, color: AppTheme.textDark),
+        //   onPressed: () => Navigator.pop(context),
+        // ),
         title: const Text(
           'Laporan Saya',
           style: TextStyle(
@@ -232,8 +234,11 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    report.dateCreated,
-                    style: const TextStyle(color: AppTheme.textGrey, fontSize: 11),
+                    DateFormat('dd/MM/yyyy').format(report.dateCreated),
+                    style: const TextStyle(
+                        color: AppTheme.textGrey,
+                        fontSize: 11,
+                  ),
                   ),
                 ],
               ),

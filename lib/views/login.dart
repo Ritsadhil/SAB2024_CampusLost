@@ -5,6 +5,7 @@ import 'register.dart';
 import 'forgot_password.dart';
 import 'beranda.dart';
 import 'main_screen.dart';
+import '../services/auth_service.dart'; // <-- 1. Import AuthService
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -20,18 +21,45 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _rememberMe = false;
   bool _isLoading = false;
 
+  // 2. Deklarasikan AuthService
+  final AuthService _authService = AuthService();
+
+  // 3. Modifikasi fungsi Login
   void _login() async {
-    // Temporary: Navigate directly without validation (as per requirements)
+    // Validasi form agar tidak kosong saat tombol ditekan
+    if (!_formKey.currentState!.validate()) return;
+
     setState(() => _isLoading = true);
-    await Future.delayed(const Duration(seconds: 1));
-    if (mounted) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const MainScreen()),
+
+    try {
+      // Coba login ke Firebase menggunakan email dan password
+      await _authService.loginWithEmail(
+        email: _emailCtrl.text.trim(),
+        password: _passCtrl.text.trim(),
       );
+
+      // Jika berhasil, arahkan langsung ke MainScreen (Beranda)
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const MainScreen()),
+        );
+      }
+    } catch (e) {
+      // Jika gagal (password salah atau email belum terdaftar), tampilkan pop-up merah
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString()),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      // Matikan animasi loading
+      if (mounted) setState(() => _isLoading = false);
     }
   }
-
-
 
   @override
   void dispose() {

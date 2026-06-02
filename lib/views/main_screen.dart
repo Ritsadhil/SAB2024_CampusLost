@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'beranda.dart';
 import 'my_reports.dart';
 import 'profile.dart';
+import 'search.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -16,7 +17,7 @@ class _MainScreenState extends State<MainScreen> {
   // Daftar halaman yang akan ditampilkan
   final List<Widget> _screens = [
     const BerandaScreen(),
-    const Center(child: Text('Halaman Search (Belum Dibuat)')), // Placeholder untuk Search
+    const SearchScreen(),
     const MyReportsScreen(),
     const ProfileScreen(),
   ];

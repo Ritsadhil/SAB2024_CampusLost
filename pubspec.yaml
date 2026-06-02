@@ -1,7 +1,7 @@
 name: campuslost
 description: Aplikasi Pelaporan & Pencarian Barang Hilang di Lingkungan Kampus
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.0.2+3
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -11,6 +11,10 @@ dependencies:
     sdk: flutter
   google_fonts: ^6.1.0
   smooth_page_indicator: ^1.1.0
+  intl: ^0.20.2
+  firebase_core: ^4.9.0
+  firebase_auth: ^6.5.1
+  cloud_firestore: ^6.5.0
 
 dev_dependencies:
   flutter_test:
