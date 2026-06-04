@@ -129,7 +129,16 @@ class _SearchScreenState extends State<SearchScreen> {
                   }
 
                   if (snapshot.hasError) {
-                    return Center(child: Text('Error: ${snapshot.error}'));
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(20.0),
+                        child: Text(
+                          'Terjadi kesalahan saat mencari data.\n\n${snapshot.error}',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Colors.red),
+                        ),
+                      ),
+                    );
                   }
 
                   final allDocs = snapshot.data?.docs ?? [];

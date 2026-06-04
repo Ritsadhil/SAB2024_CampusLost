@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../theme/app_theme.dart';
 import '../services/report_service.dart';
+import 'edit_profile.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -49,7 +50,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           future: _reportService.getUserProfile(currentUser.uid),
           builder: (context, profileSnapshot) {
             if (profileSnapshot.connectionState == ConnectionState.waiting) {
-              return Scaffold(body: const Center(child: CircularProgressIndicator()));
+              return const Scaffold(body: Center(child: CircularProgressIndicator()));
             }
 
             if (profileSnapshot.hasError) {
@@ -67,9 +68,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildProfileContent(Map<String, dynamic> profileData, User currentUser) {
     final displayName = profileData['displayName'] ?? 'Pengguna';
     final email = currentUser.email ?? '';
-    final phone = profileData['phone'] ?? '-';
-    final address = profileData['address'] ?? '-';
-    final stats = profileData['stats'] as Map<String, dynamic>? ?? {};
+    final phone = profileData['phone'] ?? '';
+    final address = profileData['address'] ?? '';
+    final stats = (profileData['stats'] as Map?)?.cast<String, dynamic>() ?? {};
 
     return Scaffold(
       backgroundColor: AppTheme.background,
@@ -107,7 +108,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             shape: BoxShape.circle,
                             border: Border.all(color: Colors.white, width: 4),
                           ),
-                          child: Icon(Icons.person_rounded, size: 50, color: AppTheme.primary),
+                          child: const Icon(Icons.person_rounded, size: 50, color: AppTheme.primary),
                         ),
                       ],
                     ),
@@ -134,8 +135,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     const Text('Informasi Pribadi', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppTheme.textDark)),
                     const SizedBox(height: 16),
                     _buildInfoField('Nama', displayName),
-                    _buildInfoField('No. HP', phone),
-                    _buildInfoField('Alamat', address),
+                    _buildInfoField('No. HP', phone.isEmpty ? '-' : phone),
+                    _buildInfoField('Alamat', address.isEmpty ? '-' : address),
                     const SizedBox(height: 24),
                     const Text('Pengaturan Akun', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppTheme.textDark)),
                     const SizedBox(height: 12),
@@ -150,8 +151,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       children: [
                         Expanded(
                           child: ElevatedButton(
-                            onPressed: () {},
-                            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primary),
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => EditProfileScreen(
+                                    initialName: displayName,
+                                    initialPhone: phone,
+                                    initialAddress: address,
+                                  ),
+                                ),
+                              ).then((_) => setState(() {}));
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primary,
+                              foregroundColor: Colors.white,
+                              minimumSize: const Size(double.infinity, 50),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
                             child: const Text('Edit Profil'),
                           ),
                         ),
@@ -159,6 +176,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         Expanded(
                           child: OutlinedButton(
                             onPressed: () => _showLogoutDialog(context),
+                            style: OutlinedButton.styleFrom(
+                              minimumSize: const Size(double.infinity, 50),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
                             child: const Text('Logout'),
                           ),
                         ),
@@ -211,10 +232,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: GestureDetector(
-        onTap: () {},
+        onTap: () {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Fitur $label akan segera hadir!'),
+              duration: const Duration(seconds: 1),
+            ),
+          );
+        },
         child: Container(
           padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: AppTheme.inputBorder.withValues(alpha: 0.5)),
+          ),
           child: Row(
             children: [
               Icon(icon, color: AppTheme.primary, size: 20),

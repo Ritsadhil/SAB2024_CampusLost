@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../theme/app_theme.dart';
 import '../theme/widgets.dart';
 import '../services/report_service.dart';
+import '../services/chat_service.dart';
+import 'chat_detail_screen.dart';
 
 class DetailItemScreen extends StatefulWidget {
   final String reportId;
@@ -15,11 +18,65 @@ class DetailItemScreen extends StatefulWidget {
 
 class _DetailItemScreenState extends State<DetailItemScreen> {
   late ReportService _reportService;
+  final ChatService _chatService = ChatService();
+  bool _isChatLoading = false;
 
   @override
   void initState() {
     super.initState();
     _reportService = ReportService();
+  }
+
+  void _startChat(Map<String, dynamic> reportData) async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final reporterId = reportData['userId'];
+    final reporterEmail = reportData['userEmail'];
+    final itemName = reportData['itemName'] ?? 'Barang';
+
+    if (currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Silakan login terlebih dahulu')),
+      );
+      return;
+    }
+
+    if (currentUser.uid == reporterId) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ini adalah laporan Anda sendiri')),
+      );
+      return;
+    }
+
+    setState(() => _isChatLoading = true);
+
+    try {
+      final String chatId = await _chatService.getOrCreateChatRoom(
+        widget.reportId,
+        reporterId,
+        reporterEmail?.split('@')[0] ?? 'Reporter',
+        itemName,
+      );
+
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ChatDetailScreen(
+              chatId: chatId,
+              otherUserName: reporterEmail?.split('@')[0] ?? 'Reporter',
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal memulai chat: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isChatLoading = false);
+    }
   }
 
   String _formatTimeAgo(Timestamp? timestamp) {
@@ -110,6 +167,7 @@ class _DetailItemScreenState extends State<DetailItemScreen> {
         final status = data['status'] ?? 'HILANG';
         final description = data['publicDescription'] ?? 'Tidak ada deskripsi';
         final createdAt = data['createdAt'] as Timestamp?;
+        final imageUrl = data['imageUrl'] as String?;
         final statusColor = _getStatusColor(status);
 
         return Scaffold(
@@ -121,12 +179,6 @@ class _DetailItemScreenState extends State<DetailItemScreen> {
               icon: const Icon(Icons.arrow_back_rounded, color: AppTheme.textDark),
               onPressed: () => Navigator.pop(context),
             ),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.share_rounded, color: AppTheme.primary),
-                onPressed: () {},
-              ),
-            ],
           ),
           body: SafeArea(
             child: SingleChildScrollView(
@@ -136,8 +188,11 @@ class _DetailItemScreenState extends State<DetailItemScreen> {
                   Container(
                     width: double.infinity,
                     height: 250,
-                    color: AppTheme.inputFill,
-                    child: Stack(
+                    decoration: BoxDecoration(
+                      color: AppTheme.inputFill,
+                      image: imageUrl != null ? DecorationImage(image: NetworkImage(imageUrl), fit: BoxFit.cover) : null,
+                    ),
+                    child: imageUrl == null ? Stack(
                       alignment: Alignment.center,
                       children: [
                         Icon(Icons.image_outlined, size: 80, color: AppTheme.textGrey.withValues(alpha: 0.3)),
@@ -157,7 +212,7 @@ class _DetailItemScreenState extends State<DetailItemScreen> {
                           ),
                         ),
                       ],
-                    ),
+                    ) : null,
                   ),
                   Padding(
                     padding: const EdgeInsets.all(20),
@@ -181,27 +236,12 @@ class _DetailItemScreenState extends State<DetailItemScreen> {
                         _buildSection('Deskripsi', description),
                         const SizedBox(height: 20),
                         _buildSection('Lokasi', location, icon: Icons.location_on_outlined),
-                        const SizedBox(height: 20),
-                        _buildSection('Informasi Pelapor', 'Identitas disembunyikan untuk privasi', icon: Icons.person_outline_rounded),
                         const SizedBox(height: 24),
-                        if (status == 'DITEMUKAN')
-                          AppButton(
-                            text: 'Hubungi Pelapor',
-                            onPressed: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Menghubungi pelapor...')),
-                              );
-                            },
-                          )
-                        else
-                          AppButton(
-                            text: 'Saya Menemukan Barang Ini',
-                            onPressed: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Laporan dikirim ke pelapor')),
-                              );
-                            },
-                          ),
+                        AppButton(
+                          text: 'Hubungi Pelapor',
+                          isLoading: _isChatLoading,
+                          onPressed: () => _startChat(data),
+                        ),
                         const SizedBox(height: 12),
                         OutlinedButton(
                           onPressed: () {},

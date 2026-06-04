@@ -70,6 +70,7 @@ class AppTextField extends StatefulWidget {
   final TextEditingController? controller;
   final String? Function(String?)? validator;
   final Widget? suffixWidget;
+  final int maxLines;
 
   const AppTextField({
     super.key,
@@ -81,6 +82,7 @@ class AppTextField extends StatefulWidget {
     this.controller,
     this.validator,
     this.suffixWidget,
+    this.maxLines = 1,
   });
 
   @override
@@ -109,6 +111,7 @@ class _AppTextFieldState extends State<AppTextField> {
           obscureText: widget.isPassword ? _obscure : false,
           keyboardType: widget.keyboardType,
           validator: widget.validator,
+          maxLines: widget.isPassword ? 1 : widget.maxLines,
           style: const TextStyle(fontSize: 15, color: AppTheme.textDark),
           decoration: InputDecoration(
             hintText: widget.hint,

@@ -1,9 +1,26 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'dart:io';
 
 class ReportService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseStorage _storage = FirebaseStorage.instance;
+
+  // UPLOAD: Upload image to Firebase Storage
+  Future<String?> uploadReportImage(File imageFile) async {
+    try {
+      final String fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final Reference ref = _storage.ref().child('reports').child(fileName);
+      final UploadTask uploadTask = ref.putFile(imageFile);
+      final TaskSnapshot snapshot = await uploadTask;
+      return await snapshot.ref.getDownloadURL();
+    } catch (e) {
+      print('Error uploading image: $e');
+      return null;
+    }
+  }
 
   // CREATE: Lapor Barang Hilang
   Future<void> createLostReport({
@@ -15,6 +32,7 @@ class ReportService {
     required bool hasPrivateDescription,
     required String privateDescription,
     required List<Map<String, String>> secretQuestions,
+    String? imageUrl,
   }) async {
     try {
       final User? currentUser = _auth.currentUser;
@@ -33,6 +51,7 @@ class ReportService {
         'hasPrivateDescription': hasPrivateDescription,
         'privateDescription': hasPrivateDescription ? privateDescription : '',
         'secretQuestions': secretQuestions,
+        'imageUrl': imageUrl,
         'status': 'HILANG',
         'type': 'LOST',
         'createdAt': FieldValue.serverTimestamp(),
@@ -51,6 +70,7 @@ class ReportService {
     required String location,
     required String description,
     required String storageStatus,
+    String? imageUrl,
   }) async {
     try {
       final User? currentUser = _auth.currentUser;
@@ -67,6 +87,7 @@ class ReportService {
         'location': location,
         'publicDescription': description,
         'storageStatus': storageStatus,
+        'imageUrl': imageUrl,
         'status': 'DITEMUKAN',
         'type': 'FOUND',
         'createdAt': FieldValue.serverTimestamp(),
@@ -102,13 +123,11 @@ class ReportService {
       return getAllReportsStream();
     }
 
-    final keywordLower = keyword.toLowerCase();
     return _firestore
         .collection('reports')
-        .where('itemName', isGreaterThanOrEqualTo: keywordLower)
-        .where('itemName', isLessThan: keywordLower + 'z')
+        .where('itemName', isGreaterThanOrEqualTo: keyword)
+        .where('itemName', isLessThan: keyword + '\uf8ff')
         .orderBy('itemName')
-        .orderBy('createdAt', descending: true)
         .snapshots();
   }
 
@@ -126,15 +145,16 @@ class ReportService {
     try {
       final user = FirebaseAuth.instance.currentUser;
       final userDoc = await _firestore.collection('users').doc(uid).get();
+      final data = userDoc.data();
 
       return {
         'uid': uid,
         'email': user?.email,
         'displayName': user?.displayName ?? user?.email?.split('@')[0] ?? 'Pengguna',
         'photoUrl': user?.photoURL,
-        'stats': userDoc.data()?['stats'] ?? {},
-        'phone': userDoc.data()?['phone'] ?? '',
-        'address': userDoc.data()?['address'] ?? '',
+        'stats': (data?['stats'] as Map?)?.cast<String, dynamic>() ?? <String, dynamic>{},
+        'phone': data?['phone'] ?? '',
+        'address': data?['address'] ?? '',
       };
     } catch (e) {
       throw Exception('Gagal mengambil profil: $e');

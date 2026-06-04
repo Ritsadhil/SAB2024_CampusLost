@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 import '../theme/app_theme.dart';
 import '../theme/widgets.dart';
 import '../services/report_service.dart';
@@ -21,9 +23,11 @@ class _ReportFoundScreenState extends State<ReportFoundScreen> {
   late TextEditingController _locationCtrl;
   late TextEditingController _descriptionCtrl;
 
-  String _storageStatus = 'Dipegang Sendiri'; // Default status penyimpanan
+  String _storageStatus = 'Dipegang Sendiri';
   bool _isLoading = false;
+  File? _selectedImage;
   final ReportService _reportService = ReportService();
+  final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
@@ -33,6 +37,15 @@ class _ReportFoundScreenState extends State<ReportFoundScreen> {
     _dateCtrl = TextEditingController();
     _locationCtrl = TextEditingController();
     _descriptionCtrl = TextEditingController();
+  }
+
+  Future<void> _pickImage() async {
+    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+    if (image != null) {
+      setState(() {
+        _selectedImage = File(image.path);
+      });
+    }
   }
 
   @override
@@ -64,7 +77,6 @@ class _ReportFoundScreenState extends State<ReportFoundScreen> {
           padding: const EdgeInsets.all(20),
           child: Column(
             children: [
-              // Step indicator
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -79,7 +91,7 @@ class _ReportFoundScreenState extends State<ReportFoundScreen> {
                   value: _currentStep / 2,
                   minHeight: 8,
                   backgroundColor: AppTheme.inputBorder,
-                  valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primary),
+                  valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primary),
                 ),
               ),
               const SizedBox(height: 24),
@@ -139,10 +151,25 @@ class _ReportFoundScreenState extends State<ReportFoundScreen> {
         const SizedBox(height: 16),
         AppTextField(label: 'Lokasi Penemuan', hint: 'Misal: Parkir Teknik Lt. 2', controller: _locationCtrl, validator: (v) => v?.isEmpty ?? true ? 'Wajib diisi' : null),
         const SizedBox(height: 16),
-        Container(
-          width: double.infinity, height: 120,
-          decoration: BoxDecoration(border: Border.all(color: AppTheme.inputBorder, width: 2), borderRadius: BorderRadius.circular(8), color: AppTheme.inputFill),
-          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.image_outlined, size: 40, color: AppTheme.textGrey), const SizedBox(height: 8), Text('Tambah Foto', style: TextStyle(color: AppTheme.textGrey, fontSize: 13))]),
+        GestureDetector(
+          onTap: _pickImage,
+          child: Container(
+            width: double.infinity, height: 160,
+            decoration: BoxDecoration(
+              border: Border.all(color: AppTheme.inputBorder, width: 2), 
+              borderRadius: BorderRadius.circular(8), 
+              color: AppTheme.inputFill,
+              image: _selectedImage != null ? DecorationImage(image: FileImage(_selectedImage!), fit: BoxFit.cover) : null,
+            ),
+            child: _selectedImage == null ? Column(
+              mainAxisAlignment: MainAxisAlignment.center, 
+              children: [
+                Icon(Icons.image_outlined, size: 40, color: AppTheme.textGrey), 
+                const SizedBox(height: 8), 
+                Text('Tambah Foto', style: TextStyle(color: AppTheme.textGrey, fontSize: 13))
+              ],
+            ) : null,
+          ),
         ),
       ],
     );
@@ -163,10 +190,9 @@ class _ReportFoundScreenState extends State<ReportFoundScreen> {
         const SizedBox(height: 24),
         const Text('Status Penyimpanan Saat Ini', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textDark)),
         const SizedBox(height: 8),
-        Text('Di mana barang temuan ini berada sekarang?', style: TextStyle(fontSize: 12, color: AppTheme.textGrey)),
+        const Text('Di mana barang temuan ini berada sekarang?', style: TextStyle(fontSize: 12, color: AppTheme.textGrey)),
         const SizedBox(height: 12),
 
-        // Pilihan Status Penyimpanan
         Container(
           decoration: BoxDecoration(border: Border.all(color: AppTheme.inputBorder), borderRadius: BorderRadius.circular(8)),
           child: Column(
@@ -197,6 +223,11 @@ class _ReportFoundScreenState extends State<ReportFoundScreen> {
     setState(() => _isLoading = true);
 
     try {
+      String? imageUrl;
+      if (_selectedImage != null) {
+        imageUrl = await _reportService.uploadReportImage(_selectedImage!);
+      }
+
       await _reportService.createFoundReport(
         itemName: _itemNameCtrl.text.trim(),
         category: _categoryCtrl.text.trim(),
@@ -204,6 +235,7 @@ class _ReportFoundScreenState extends State<ReportFoundScreen> {
         location: _locationCtrl.text.trim(),
         description: _descriptionCtrl.text.trim(),
         storageStatus: _storageStatus,
+        imageUrl: imageUrl,
       );
 
       if (mounted) {
