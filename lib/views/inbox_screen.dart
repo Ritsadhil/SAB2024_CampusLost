@@ -97,6 +97,31 @@ class _InboxScreenState extends State<InboxScreen> {
           return const Center(child: CircularProgressIndicator());
         }
 
+        if (snapshot.hasError) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Gagal memuat pesan.',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    snapshot.error.toString(),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
         final conversations = snapshot.data?.docs ?? [];
 
         if (conversations.isEmpty) {

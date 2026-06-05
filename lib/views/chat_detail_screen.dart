@@ -79,7 +79,21 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                   return const Center(child: CircularProgressIndicator());
                 }
 
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24.0),
+                      child: Text(
+                        'Error: ${snapshot.error}',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Colors.red),
+                      ),
+                    ),
+                  );
+                }
+
                 final messages = snapshot.data?.docs ?? [];
+                // ... rest of builder ...
 
                 return ListView.builder(
                   reverse: true,
