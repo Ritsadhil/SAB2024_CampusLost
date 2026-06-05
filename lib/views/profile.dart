@@ -29,7 +29,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         elevation: 0,
         automaticallyImplyLeading: false,
         // leading: IconButton(
-        //   icon: const Icon(Icons.arrow_back_rounded, color: AppTheme.textDark),
+        //   icon: const icon(Icons.arrow_back_rounded, color: AppTheme.textDark),
         //   onPressed: () => Navigator.pop(context),
         // ),
         title: const Text(
