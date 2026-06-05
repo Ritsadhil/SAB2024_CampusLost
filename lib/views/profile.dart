@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../theme/app_theme.dart';
 import '../services/report_service.dart';
+import '../services/chat_service.dart';
 import 'edit_profile.dart';
 import 'settings_detail_screen.dart';
-import 'admin_dashboard_screen.dart';
+import 'chat_detail_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -15,7 +16,9 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   late ReportService _reportService;
+  final ChatService _chatService = ChatService();
   late FirebaseAuth _auth;
+  bool _isAdminLoading = false;
 
   @override
   void initState() {
@@ -234,12 +237,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: GestureDetector(
-        onTap: () {
+        onTap: () async {
           if (label == 'Hubungi Admin') {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
-            );
+            setState(() => _isAdminLoading = true);
+            try {
+              final String chatId = await _chatService.getOrCreateAdminChat();
+              if (mounted) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ChatDetailScreen(
+                      chatId: chatId,
+                      otherUserName: 'Admin CampusLost',
+                    ),
+                  ),
+                );
+              }
+            } finally {
+              if (mounted) setState(() => _isAdminLoading = false);
+            }
           } else {
             Navigator.push(
               context,
@@ -256,7 +272,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           child: Row(
             children: [
-              Icon(icon, color: AppTheme.primary, size: 20),
+              if (label == 'Hubungi Admin' && _isAdminLoading)
+                const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+              else
+                Icon(icon, color: AppTheme.primary, size: 20),
               const SizedBox(width: 12),
               Expanded(child: Text(label, style: const TextStyle(fontSize: 14, color: AppTheme.textDark))),
               const Icon(Icons.chevron_right, color: AppTheme.textGrey),

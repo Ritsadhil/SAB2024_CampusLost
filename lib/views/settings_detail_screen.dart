@@ -22,58 +22,108 @@ class SettingsDetailScreen extends StatelessWidget {
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppTheme.inputBorder),
-              ),
-              child: Column(
-                children: [
-                  Icon(Icons.construction_rounded, size: 64, color: AppTheme.primary.withValues(alpha: 0.3)),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Halaman $title sedang dalam pengembangan',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppTheme.textDark),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Kami sedang menyiapkan fitur ini untuk meningkatkan pengalaman Anda di CampusLost.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 13, color: AppTheme.textGrey),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            _buildSettingOption('Izinkan Akses', true),
-            _buildSettingOption('Notifikasi Email', false),
-            _buildSettingOption('Mode Privasi', true),
-          ],
-        ),
+        child: _buildContent(context),
       ),
     );
   }
 
-  Widget _buildSettingOption(String label, bool initialValue) {
+  Widget _buildContent(BuildContext context) {
+    switch (title) {
+      case 'Notifikasi':
+        return _buildNotificationContent();
+      case 'Keamanan':
+        return _buildSecurityContent();
+      case 'Privasi':
+        return _buildPrivacyContent();
+      case 'Bantuan':
+        return _buildHelpContent();
+      case 'Syarat & Ketentuan':
+        return _buildTermsContent();
+      default:
+        return const Center(child: Text('Halaman tidak ditemukan'));
+    }
+  }
+
+  Widget _buildNotificationContent() {
+    return Column(
+      children: [
+        _buildSettingOption('Notifikasi Aplikasi', true, Icons.notifications_active_outlined),
+        _buildSettingOption('Suara Notifikasi', true, Icons.volume_up_outlined),
+        _buildSettingOption('Getar', false, Icons.vibration_outlined),
+        _buildSettingOption('Update Status Laporan', true, Icons.update_outlined),
+        _buildSettingOption('Pesan Baru', true, Icons.chat_bubble_outline),
+      ],
+    );
+  }
+
+  Widget _buildSecurityContent() {
+    return Column(
+      children: [
+        _buildActionTile('Ganti Password', Icons.lock_outline, () {}),
+        _buildActionTile('Autentikasi Dua Faktor', Icons.verified_user_outlined, () {}),
+        _buildActionTile('Perangkat Terhubung', Icons.devices_other_outlined, () {}),
+        _buildActionTile('Hapus Akun', Icons.delete_forever_outlined, () {}, isDanger: true),
+      ],
+    );
+  }
+
+  Widget _buildPrivacyContent() {
+    return Column(
+      children: [
+        _buildSettingOption('Tampilkan No. HP di Laporan', false, Icons.phone_android_outlined),
+        _buildSettingOption('Visibilitas Profil ke Publik', true, Icons.visibility_outlined),
+        _buildSettingOption('Izinkan Pesan dari Non-Pelapor', false, Icons.message_outlined),
+        _buildActionTile('Blokir Pengguna', Icons.block_flipped, () {}),
+      ],
+    );
+  }
+
+  Widget _buildHelpContent() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Pertanyaan Umum (FAQ)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 16),
+        _buildFAQTile('Bagaimana cara melaporkan barang hilang?', 'Anda bisa masuk ke tab Home dan klik tombol "Lapor Hilang".'),
+        _buildFAQTile('Bagaimana sistem verifikasi bekerja?', 'Pemilik harus menjawab pertanyaan rahasia yang dibuat oleh penemu.'),
+        _buildFAQTile('Apakah data saya aman?', 'Kami menjaga privasi data Anda sesuai dengan kebijakan privasi kami.'),
+        const SizedBox(height: 24),
+        const Text('Masih butuh bantuan?', style: TextStyle(fontSize: 14, color: AppTheme.textGrey)),
+        const SizedBox(height: 8),
+        _buildActionTile('Kirim Tiket Bantuan', Icons.support_agent_outlined, () {}),
+      ],
+    );
+  }
+
+  Widget _buildTermsContent() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+      child: const Text(
+        'Selamat datang di CampusLost. Dengan menggunakan aplikasi ini, Anda setuju untuk:\n\n'
+        '1. Memberikan informasi yang jujur dan akurat dalam setiap laporan.\n'
+        '2. Tidak menyalahgunakan fitur chat untuk penipuan.\n'
+        '3. Menghargai privasi pengguna lain.\n\n'
+        'Aplikasi ini dibuat untuk membantu komunitas kampus menemukan barang yang hilang secara aman dan transparan.',
+        style: TextStyle(fontSize: 14, height: 1.6, color: AppTheme.textDark),
+      ),
+    );
+  }
+
+  Widget _buildSettingOption(String label, bool initialValue, IconData icon) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppTheme.inputBorder),
+        border: Border.all(color: AppTheme.inputBorder.withValues(alpha: 0.5)),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+          Icon(icon, size: 20, color: AppTheme.primary),
+          const SizedBox(width: 12),
+          Expanded(child: Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500))),
           Switch(
             value: initialValue,
             onChanged: (v) {},
@@ -81,6 +131,46 @@ class SettingsDetailScreen extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildActionTile(String label, IconData icon, VoidCallback onTap, {bool isDanger = false}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppTheme.inputBorder.withValues(alpha: 0.5)),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 20, color: isDanger ? Colors.red : AppTheme.primary),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: isDanger ? Colors.red : AppTheme.textDark),
+              ),
+            ),
+            Icon(Icons.chevron_right, size: 18, color: isDanger ? Colors.red : AppTheme.textGrey),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFAQTile(String question, String answer) {
+    return ExpansionTile(
+      title: Text(question, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Text(answer, style: const TextStyle(fontSize: 13, color: AppTheme.textGrey)),
+        ),
+      ],
     );
   }
 }

@@ -40,17 +40,20 @@ class ChatService {
         .collection('messages')
         .doc();
     
+    final timestamp = FieldValue.serverTimestamp();
+
     batch.set(messageRef, {
       'senderId': uid,
       'text': text.trim(),
-      'createdAt': FieldValue.serverTimestamp(),
+      'createdAt': timestamp,
     });
 
     final chatRef = _firestore.collection('chats').doc(chatId);
     batch.update(chatRef, {
       'lastMessage': text.trim(),
-      'lastMessageAt': FieldValue.serverTimestamp(),
+      'lastMessageAt': timestamp,
       'lastSenderId': uid,
+      'updatedAt': timestamp, // Tambahan untuk memicu stream
     });
 
     await batch.commit();
@@ -61,14 +64,13 @@ class ChatService {
     final currentUid = _auth.currentUser?.uid;
     if (currentUid == null) throw Exception('User not logged in');
 
-    // Cek apakah chat sudah ada
+    // Cek apakah chat sudah ada (khusus untuk laporan tertentu)
     final existingChat = await _firestore
         .collection('chats')
         .where('reportId', isEqualTo: reportId)
         .where('participants', arrayContains: currentUid)
         .get();
 
-    // Filter manual untuk memastikan kedua partisipan ada (karena array-contains hanya bisa satu)
     for (var doc in existingChat.docs) {
       List participants = doc['participants'];
       if (participants.contains(reporterId)) {
@@ -78,6 +80,8 @@ class ChatService {
 
     // Jika belum ada, buat baru
     final newChatRef = _firestore.collection('chats').doc();
+    final timestamp = FieldValue.serverTimestamp();
+    
     await newChatRef.set({
       'reportId': reportId,
       'itemName': itemName,
@@ -87,10 +91,17 @@ class ChatService {
         reporterId: reporterName,
       },
       'lastMessage': '',
-      'lastMessageAt': FieldValue.serverTimestamp(),
-      'createdAt': FieldValue.serverTimestamp(),
+      'lastMessageAt': timestamp,
+      'createdAt': timestamp,
     });
 
     return newChatRef.id;
+  }
+
+  // Khusus untuk bantuan admin
+  Future<String> getOrCreateAdminChat() async {
+    const adminId = 'admin_support_system';
+    const adminName = 'Admin CampusLost';
+    return await getOrCreateChatRoom('SUPPORT', adminId, adminName, 'Bantuan Teknis');
   }
 }
