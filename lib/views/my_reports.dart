@@ -267,28 +267,3 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
     );
   }
 }
-
-  void _showFilterMenu() {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Text('Filter Status', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppTheme.textDark)),
-          ),
-          ...filters.map(
-            (filter) => ListTile(
-              title: Text(filter),
-              onTap: () {
-                setState(() => _selectedFilter = filter);
-                Navigator.pop(context);
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
