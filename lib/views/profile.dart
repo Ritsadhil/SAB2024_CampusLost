@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../theme/app_theme.dart';
 import '../services/report_service.dart';
 import 'edit_profile.dart';
+import 'settings_detail_screen.dart';
+import 'admin_dashboard_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -233,12 +235,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
       padding: const EdgeInsets.only(bottom: 12),
       child: GestureDetector(
         onTap: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Fitur $label akan segera hadir!'),
-              duration: const Duration(seconds: 1),
-            ),
-          );
+          if (label == 'Hubungi Admin') {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
+            );
+          } else {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => SettingsDetailScreen(title: label)),
+            );
+          }
         },
         child: Container(
           padding: const EdgeInsets.all(12),
