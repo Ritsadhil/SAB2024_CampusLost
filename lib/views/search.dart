@@ -145,8 +145,10 @@ class _SearchScreenState extends State<SearchScreen> {
 
                   List<QueryDocumentSnapshot> filteredDocs = allDocs.where((doc) {
                     final data = doc.data() as Map<String, dynamic>;
-                    final category = data['category'] as String? ?? 'Lainnya';
-                    return _selectedCategory == 'Semua' || category == _selectedCategory;
+                    final category = (data['category'] as String? ?? 'Lainnya').trim().toLowerCase();
+                    final selected = _selectedCategory.trim().toLowerCase();
+                    
+                    return _selectedCategory == 'Semua' || category == selected;
                   }).toList();
 
                   if (filteredDocs.isEmpty) {
