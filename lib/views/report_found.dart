@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong2.dart';
 import 'dart:typed_data';
 import '../theme/app_theme.dart';
 import '../theme/widgets.dart';
@@ -33,7 +34,7 @@ class _ReportFoundScreenState extends State<ReportFoundScreen> {
   // Location
   double? _lat;
   double? _lng;
-  GoogleMapController? _mapController;
+  final MapController _mapController = MapController();
 
   final ReportService _reportService = ReportService();
   final ImagePicker _picker = ImagePicker();
@@ -102,9 +103,7 @@ class _ReportFoundScreenState extends State<ReportFoundScreen> {
         _locationCtrl.text = "Lokasi terdeteksi secara presisi";
       });
       
-      _mapController?.animateCamera(
-        CameraUpdate.newLatLngZoom(LatLng(_lat!, _lng!), 16),
-      );
+      _mapController.move(LatLng(_lat!, _lng!), 15);
 
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Lokasi berhasil diambil!'), backgroundColor: Colors.green));
     } catch (e) {
@@ -218,57 +217,51 @@ class _ReportFoundScreenState extends State<ReportFoundScreen> {
         AppTextField(label: 'Lokasi Penemuan', hint: 'Misal: Parkir Teknik Lt. 2', controller: _locationCtrl, validator: (v) => v?.isEmpty ?? true ? 'Wajib diisi' : null, suffixWidget: IconButton(icon: const Icon(Icons.my_location_rounded, size: 20), onPressed: _getCurrentLocation)),
         const SizedBox(height: 16),
 
-        // INTERACTIVE MAP
+        // INTERACTIVE MAP (OpenStreetMap)
         Container(
           height: 200,
           width: double.infinity,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: AppTheme.inputBorder),
-            color: Colors.grey.shade100,
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(12),
-            child: Stack(
+            child: FlutterMap(
+              mapController: _mapController,
+              options: MapOptions(
+                initialCenter: const LatLng(-6.9147, 107.6098),
+                initialZoom: 13,
+                onTap: (tapPosition, point) {
+                  setState(() {
+                    _lat = point.latitude;
+                    _lng = point.longitude;
+                    _locationCtrl.text = "Pin diletakkan di peta";
+                  });
+                },
+              ),
               children: [
-                GoogleMap(
-                  initialCameraPosition: const CameraPosition(
-                    target: LatLng(-6.9147, 107.6098),
-                    zoom: 13,
-                  ),
-                  onMapCreated: (controller) => _mapController = controller,
-                  onTap: (LatLng pos) {
-                    setState(() {
-                      _lat = pos.latitude;
-                      _lng = pos.longitude;
-                      _locationCtrl.text = "Pin diletakkan di peta";
-                    });
-                  },
-                  markers: _lat != null && _lng != null ? {
-                    Marker(
-                      markerId: const MarkerId('picked_loc'),
-                      position: LatLng(_lat!, _lng!),
-                    )
-                  } : {},
-                  myLocationButtonEnabled: false,
-                  zoomControlsEnabled: true,
+                TileLayer(
+                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'com.campuslost.app',
                 ),
-                IgnorePointer(
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    alignment: Alignment.center,
-                    child: Text(
-                      'Peta memerlukan API Key aktif.\n(Cek instruksi di index.html)',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 10, color: Colors.black.withValues(alpha: 0.3)),
-                    ),
+                if (_lat != null && _lng != null)
+                  MarkerLayer(
+                    markers: [
+                      Marker(
+                        point: LatLng(_lat!, _lng!),
+                        width: 40,
+                        height: 40,
+                        child: const Icon(Icons.location_on, color: Colors.red, size: 40),
+                      ),
+                    ],
                   ),
-                ),
               ],
             ),
           ),
         ),
         const SizedBox(height: 16),
+
         GestureDetector(
           onTap: _pickImage,
           child: Container(
@@ -284,7 +277,7 @@ class _ReportFoundScreenState extends State<ReportFoundScreen> {
               children: [
                 Icon(Icons.image_outlined, size: 40, color: AppTheme.textGrey), 
                 const SizedBox(height: 8), 
-                Text('Tambah Foto', style: TextStyle(color: AppTheme.textGrey, fontSize: 13))
+                Text('Tambah Foto', style: const TextStyle(color: AppTheme.textGrey, fontSize: 13))
               ],
             ) : null,
           ),

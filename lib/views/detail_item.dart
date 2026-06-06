@@ -1,17 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong2.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_theme.dart';
 import '../theme/widgets.dart';
 import '../services/report_service.dart';
 import '../services/chat_service.dart';
 import 'chat_detail_screen.dart';
 import 'claim_verification_screen.dart';
-
-import 'package:flutter/foundation.dart'; // Import kIsWeb
-import 'package:google_maps_flutter/google_maps_flutter.dart';
-
-import 'package:url_launcher/url_launcher.dart'; // Import url_launcher
 
 class DetailItemScreen extends StatefulWidget {
   final String reportId;
@@ -40,16 +38,12 @@ class _DetailItemScreenState extends State<DetailItemScreen> {
     final itemName = reportData['itemName'] ?? 'Barang';
 
     if (currentUser == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Silakan login terlebih dahulu')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Silakan login terlebih dahulu')));
       return;
     }
 
     if (currentUser.uid == reporterId) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ini adalah laporan Anda sendiri')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ini adalah laporan Anda sendiri')));
       return;
     }
 
@@ -64,22 +58,10 @@ class _DetailItemScreenState extends State<DetailItemScreen> {
       );
 
       if (mounted) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ChatDetailScreen(
-              chatId: chatId,
-              otherUserName: reporterEmail?.split('@')[0] ?? 'Reporter',
-            ),
-          ),
-        );
+        Navigator.push(context, MaterialPageRoute(builder: (_) => ChatDetailScreen(chatId: chatId, otherUserName: reporterEmail?.split('@')[0] ?? 'Reporter')));
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal memulai chat: $e')),
-        );
-      }
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal memulai chat: $e')));
     } finally {
       if (mounted) setState(() => _isChatLoading = false);
     }
@@ -89,7 +71,6 @@ class _DetailItemScreenState extends State<DetailItemScreen> {
     if (timestamp == null) return 'Baru saja';
     final now = DateTime.now();
     final difference = now.difference(timestamp.toDate());
-
     if (difference.inDays > 0) return '${difference.inDays} hari yang lalu';
     if (difference.inHours > 0) return '${difference.inHours} jam yang lalu';
     if (difference.inMinutes > 0) return '${difference.inMinutes} menit yang lalu';
@@ -98,7 +79,7 @@ class _DetailItemScreenState extends State<DetailItemScreen> {
 
   Color _getStatusColor(String status) {
     if (status.toUpperCase() == 'HILANG') return Colors.red;
-    if (status.toUpperCase() == 'DITEMUKAN') return Colors.green;
+    if (status.toUpperCase().contains('DITEMUKAN') || status.toUpperCase().contains('SELESAI')) return Colors.green;
     return Colors.grey;
   }
 
@@ -117,21 +98,12 @@ class _DetailItemScreenState extends State<DetailItemScreen> {
         Container(
           width: double.infinity,
           padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: AppTheme.inputBorder),
-          ),
+          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8), border: Border.all(color: AppTheme.inputBorder)),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (icon != null) ...[
-                Icon(icon, size: 18, color: AppTheme.primary),
-                const SizedBox(width: 10),
-              ],
-              Expanded(
-                child: Text(content, style: const TextStyle(fontSize: 13, color: AppTheme.textDark, height: 1.5)),
-              ),
+              if (icon != null) ...[Icon(icon, size: 18, color: AppTheme.primary), const SizedBox(width: 10)],
+              Expanded(child: Text(content, style: const TextStyle(fontSize: 13, color: AppTheme.textDark, height: 1.5))),
             ],
           ),
         ),
@@ -145,31 +117,11 @@ class _DetailItemScreenState extends State<DetailItemScreen> {
       future: _reportService.getReportById(widget.reportId),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return Scaffold(
-            appBar: AppBar(
-              backgroundColor: Colors.white,
-              elevation: 0,
-              leading: IconButton(
-                icon: const Icon(Icons.arrow_back_rounded, color: AppTheme.textDark),
-                onPressed: () => Navigator.pop(context),
-              ),
-            ),
-            body: const Center(child: CircularProgressIndicator()),
-          );
+          return Scaffold(appBar: AppBar(backgroundColor: Colors.white, elevation: 0), body: const Center(child: CircularProgressIndicator()));
         }
 
         if (snapshot.hasError || snapshot.data == null) {
-          return Scaffold(
-            appBar: AppBar(
-              backgroundColor: Colors.white,
-              elevation: 0,
-              leading: IconButton(
-                icon: const Icon(Icons.arrow_back_rounded, color: AppTheme.textDark),
-                onPressed: () => Navigator.pop(context),
-              ),
-            ),
-            body: const Center(child: Text('Barang tidak ditemukan')),
-          );
+          return Scaffold(appBar: AppBar(backgroundColor: Colors.white, elevation: 0), body: const Center(child: Text('Barang tidak ditemukan')));
         }
 
         final data = snapshot.data!;
@@ -189,10 +141,7 @@ class _DetailItemScreenState extends State<DetailItemScreen> {
           appBar: AppBar(
             backgroundColor: Colors.white,
             elevation: 0,
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back_rounded, color: AppTheme.textDark),
-              onPressed: () => Navigator.pop(context),
-            ),
+            leading: IconButton(icon: const Icon(Icons.arrow_back_rounded, color: AppTheme.textDark), onPressed: () => Navigator.pop(context)),
           ),
           body: SafeArea(
             child: SingleChildScrollView(
@@ -200,55 +149,25 @@ class _DetailItemScreenState extends State<DetailItemScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
-                    width: double.infinity,
-                    height: 250,
-                    decoration: BoxDecoration(
-                      color: AppTheme.inputFill,
-                    ),
+                    width: double.infinity, height: 250,
+                    decoration: const BoxDecoration(color: AppTheme.inputFill),
                     child: Stack(
                       alignment: Alignment.center,
                       children: [
                         if (imageUrl != null && imageUrl.isNotEmpty)
                           Image.network(
                             imageUrl,
-                            width: double.infinity,
-                            height: 250,
-                            fit: BoxFit.cover,
-                            headers: const {
-                              "Access-Control-Allow-Origin": "*",
-                            },
-                            errorBuilder: (context, error, stackTrace) {
-                              return Center(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    const Icon(Icons.broken_image_outlined, size: 48, color: Colors.grey),
-                                    const SizedBox(height: 8),
-                                    Text('Gagal memuat gambar (Cek CORS)', style: TextStyle(fontSize: 10, color: Colors.grey.shade600)),
-                                  ],
-                                ),
-                              );
-                            },
-                            loadingBuilder: (context, child, loadingProgress) {
-                              if (loadingProgress == null) return child;
-                              return const Center(child: CircularProgressIndicator());
-                            },
+                            width: double.infinity, height: 250, fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image_outlined, size: 80, color: Colors.grey),
                           )
                         else
                           Icon(Icons.image_outlined, size: 80, color: AppTheme.textGrey.withValues(alpha: 0.3)),
                         Positioned(
-                          top: 16,
-                          right: 16,
+                          top: 16, right: 16,
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: statusColor,
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              status,
-                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white),
-                            ),
+                            decoration: BoxDecoration(color: statusColor, borderRadius: BorderRadius.circular(20)),
+                            child: Text(status, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white)),
                           ),
                         ),
                       ],
@@ -263,11 +182,11 @@ class _DetailItemScreenState extends State<DetailItemScreen> {
                         const SizedBox(height: 8),
                         Row(
                           children: [
-                            Icon(Icons.local_offer_outlined, size: 14, color: AppTheme.textGrey),
+                            const Icon(Icons.local_offer_outlined, size: 14, color: AppTheme.textGrey),
                             const SizedBox(width: 6),
                             Text(category, style: const TextStyle(fontSize: 13, color: AppTheme.textGrey)),
                             const Spacer(),
-                            Icon(Icons.access_time_rounded, size: 14, color: AppTheme.textGrey),
+                            const Icon(Icons.access_time_rounded, size: 14, color: AppTheme.textGrey),
                             const SizedBox(width: 6),
                             Text(_formatTimeAgo(createdAt), style: const TextStyle(fontSize: 13, color: AppTheme.textGrey)),
                           ],
@@ -282,93 +201,55 @@ class _DetailItemScreenState extends State<DetailItemScreen> {
                           trailing: (lat != null && lng != null) ? TextButton.icon(
                             onPressed: () async {
                               final url = Uri.parse('https://www.google.com/maps/search/?api=1&query=$lat,$lng');
-                              if (await canLaunchUrl(url)) {
-                                await launchUrl(url);
-                              }
+                              await launchUrl(url);
                             },
                             icon: const Icon(Icons.open_in_new, size: 14),
-                            label: const Text('Buka di Maps', style: TextStyle(fontSize: 12)),
+                            label: const Text('Buka di Google Maps', style: TextStyle(fontSize: 12)),
                           ) : null,
                         ),
                         
                         if (lat != null && lng != null) ...[
                           const SizedBox(height: 12),
                           Container(
-                            height: 180,
-                            width: double.infinity,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: AppTheme.inputBorder),
-                            ),
+                            height: 200, width: double.infinity,
+                            decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), border: Border.all(color: AppTheme.inputBorder)),
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(12),
-                              child: GoogleMap(
-                                initialCameraPosition: CameraPosition(
-                                  target: LatLng(lat, lng),
-                                  zoom: 15,
-                                ),
-                                markers: {
-                                  Marker(
-                                    markerId: const MarkerId('item_location'),
-                                    position: LatLng(lat, lng),
-                                    infoWindow: InfoWindow(title: title, snippet: location),
-                                  ),
-                                },
-                                zoomControlsEnabled: true,
-                                mapToolbarEnabled: true,
-                                myLocationButtonEnabled: false,
-                                mapType: MapType.normal,
-                                onMapCreated: (GoogleMapController controller) {
-                                  // Optional: do something when map is ready
-                                },
+                              child: FlutterMap(
+                                options: MapOptions(initialCenter: LatLng(lat, lng), initialZoom: 15),
+                                children: [
+                                  TileLayer(urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'),
+                                  MarkerLayer(markers: [Marker(point: LatLng(lat, lng), width: 40, height: 40, child: const Icon(Icons.location_on, color: Colors.red, size: 40))]),
+                                ],
                               ),
                             ),
                           ),
                         ],
-
+                        
                         const SizedBox(height: 24),
                         if (status != 'SELESAI / CLAIMED') ...[
-                          AppButton(
-                            text: 'Hubungi Pelapor',
-                            isLoading: _isChatLoading,
-                            onPressed: () => _startChat(data),
-                          ),
+                          AppButton(text: 'Hubungi Pelapor', isLoading: _isChatLoading, onPressed: () => _startChat(data)),
                           const SizedBox(height: 12),
                           if (status == 'HILANG')
                             OutlinedButton(
                               onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => ClaimVerificationScreen(
-                                      reportId: widget.reportId,
-                                      reporterId: data['userId'],
-                                      itemName: title,
-                                      location: location,
-                                      secretQuestions: data['secretQuestions'] ?? [],
-                                    ),
-                                  ),
-                                );
+                                Navigator.push(context, MaterialPageRoute(builder: (_) => ClaimVerificationScreen(
+                                  reportId: widget.reportId,
+                                  reporterId: data['userId'],
+                                  itemName: title,
+                                  location: location,
+                                  secretQuestions: data['secretQuestions'] ?? [],
+                                )));
                               },
-                              style: OutlinedButton.styleFrom(
-                                minimumSize: const Size(double.infinity, 50),
-                                foregroundColor: AppTheme.primary,
-                                side: const BorderSide(color: AppTheme.primary),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              ),
+                              style: OutlinedButton.styleFrom(minimumSize: const Size(double.infinity, 50), foregroundColor: AppTheme.primary, side: const BorderSide(color: AppTheme.primary), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
                               child: const Text('Saya Menemukan Barang Ini'),
                             ),
                         ],
                         const SizedBox(height: 12),
                         OutlinedButton(
                           onPressed: () {},
-                          style: OutlinedButton.styleFrom(
-                            minimumSize: const Size(double.infinity, 50),
-                            foregroundColor: Colors.orange,
-                            side: const BorderSide(color: Colors.orange),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          ),
-                          child: const Text('Laporkan'),
+                          style: OutlinedButton.styleFrom(minimumSize: const Size(double.infinity, 50), foregroundColor: Colors.orange, side: const BorderSide(color: Colors.orange), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                          child: const Text('Laporkan Masalah'),
                         ),
                       ],
                     ),
