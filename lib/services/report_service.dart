@@ -140,24 +140,99 @@ class ReportService {
         .snapshots();
   }
 
-  // READ: Get user profile (combine Auth + Firestore user data)
-  Future<Map<String, dynamic>> getUserProfile(String uid) async {
+  // --- CLAIM & VERIFICATION SYSTEM ---
+
+  // SUBMIT: Penemu mengirim klaim (jawaban pertanyaan rahasia + bukti)
+  Future<void> submitClaim({
+    required String reportId,
+    required String reporterId, // Akun pemilik barang
+    required String itemName,
+    required List<Map<String, String>> answers, // Jawaban penemu
+    String? proofImageUrl,
+    String? privateDescription,
+  }) async {
     try {
-      final user = FirebaseAuth.instance.currentUser;
-      final userDoc = await _firestore.collection('users').doc(uid).get();
-      final data = userDoc.data();
+      final user = _auth.currentUser;
+      if (user == null) throw Exception('Silakan login dahulu');
+
+      await _firestore.collection('claims').add({
+        'reportId': reportId,
+        'reporterId': reporterId,
+        'claimantId': user.uid,
+        'claimantEmail': user.email,
+        'itemName': itemName,
+        'answers': answers,
+        'proofImageUrl': proofImageUrl,
+        'privateDescription': privateDescription,
+        'status': 'PENDING',
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      throw Exception('Gagal mengirim klaim: $e');
+    }
+  }
+
+  // READ: Dapatkan klaim masuk untuk laporan user tertentu
+  Stream<QuerySnapshot> getIncomingClaimsStream(String userId) {
+    return _firestore
+        .collection('claims')
+        .where('reporterId', isEqualTo: userId)
+        .orderBy('createdAt', descending: true)
+        .snapshots();
+  }
+
+  // UPDATE: Pemilik barang menyetujui atau menolak klaim
+  Future<void> updateClaimStatus(String claimId, String reportId, String status) async {
+    try {
+      final batch = _firestore.batch();
+      
+      // 1. Update status klaim
+      final claimRef = _firestore.collection('claims').doc(claimId);
+      batch.update(claimRef, {'status': status});
+
+      // 2. Jika disetujui, update status barang
+      if (status == 'APPROVED') {
+        final reportRef = _firestore.collection('reports').doc(reportId);
+        batch.update(reportRef, {'status': 'SELESAI / CLAIMED'});
+      }
+
+      await batch.commit();
+    } catch (e) {
+      throw Exception('Gagal memperbarui status: $e');
+    }
+  }
+
+  // --- ADMIN FEATURES ---
+
+  // READ: Statistik Admin (Live)
+  Future<Map<String, dynamic>> getAdminStats() async {
+    try {
+      final reports = await _firestore.collection('reports').get();
+      final users = await _firestore.collection('users').get();
+      final claims = await _firestore.collection('claims').where('status', isEqualTo: 'APPROVED').get();
 
       return {
-        'uid': uid,
-        'email': user?.email,
-        'displayName': user?.displayName ?? user?.email?.split('@')[0] ?? 'Pengguna',
-        'photoUrl': user?.photoURL,
-        'stats': (data?['stats'] as Map?)?.cast<String, dynamic>() ?? <String, dynamic>{},
-        'phone': data?['phone'] ?? '',
-        'address': data?['address'] ?? '',
+        'totalReports': reports.docs.length,
+        'totalUsers': users.docs.length,
+        'resolvedReports': claims.docs.length,
+        'activeLost': reports.docs.where((d) => d['status'] == 'HILANG').length,
       };
     } catch (e) {
-      throw Exception('Gagal mengambil profil: $e');
+      return {
+        'totalReports': 0,
+        'totalUsers': 0,
+        'resolvedReports': 0,
+        'activeLost': 0,
+      };
+    }
+  }
+
+  // DELETE: Admin menghapus laporan bermasalah
+  Future<void> deleteReport(String reportId) async {
+    try {
+      await _firestore.collection('reports').doc(reportId).delete();
+    } catch (e) {
+      throw Exception('Gagal menghapus laporan: $e');
     }
   }
 }

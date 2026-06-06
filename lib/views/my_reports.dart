@@ -137,15 +137,7 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
             final data = doc.data() as Map<String, dynamic>;
             return Padding(
               padding: EdgeInsets.only(bottom: index < filteredDocs.length - 1 ? 12 : 0),
-              child: GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => DetailItemScreen(reportId: doc.id)),
-                  );
-                },
-                child: _buildReportCard(data),
-              ),
+              child: _buildReportCard(doc.id, data),
             );
           },
         );
@@ -153,12 +145,11 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
     );
   }
 
-  Widget _buildReportCard(Map<String, dynamic> data) {
+  Widget _buildReportCard(String reportId, Map<String, dynamic> data) {
     final title = data['itemName'] ?? 'Barang';
     final status = data['status'] ?? 'HILANG';
     final location = data['location'] ?? 'Lokasi tidak diketahui';
     final imageUrl = data['imageUrl'] as String?;
-    final createdAt = data['createdAt'] as Timestamp?;
     
     bool isHilang = status == 'HILANG';
 
@@ -169,75 +160,172 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
         border: Border.all(color: AppTheme.inputBorder),
       ),
       padding: const EdgeInsets.all(12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Column(
         children: [
-          Container(
-            width: 70,
-            height: 70,
-            decoration: BoxDecoration(
-              color: AppTheme.background,
-              borderRadius: BorderRadius.circular(8),
-              image: imageUrl != null ? DecorationImage(image: NetworkImage(imageUrl), fit: BoxFit.cover) : null,
-            ),
-            child: imageUrl == null ? const Icon(Icons.image_outlined, size: 28, color: AppTheme.textGrey) : null,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 70,
+                height: 70,
+                decoration: BoxDecoration(
+                  color: AppTheme.background,
+                  borderRadius: BorderRadius.circular(8),
+                  image: imageUrl != null ? DecorationImage(image: NetworkImage(imageUrl), fit: BoxFit.cover) : null,
+                ),
+                child: imageUrl == null ? const Icon(Icons.image_outlined, size: 28, color: AppTheme.textGrey) : null,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: Text(
-                        title,
-                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textDark),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: isHilang ? AppTheme.primary.withValues(alpha: 0.1) : Colors.green.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        status,
-                        style: TextStyle(
-                          color: isHilang ? AppTheme.primary : Colors.green,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textDark), maxLines: 1, overflow: TextOverflow.ellipsis),
                         ),
-                      ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: isHilang ? AppTheme.primary.withValues(alpha: 0.1) : Colors.green.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(status, style: TextStyle(color: isHilang ? AppTheme.primary : Colors.green, fontSize: 11, fontWeight: FontWeight.w700)),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        const Icon(Icons.location_on_outlined, size: 12, color: AppTheme.textGrey),
+                        const SizedBox(width: 4),
+                        Expanded(child: Text(location, style: const TextStyle(color: AppTheme.textGrey, fontSize: 12), maxLines: 1, overflow: TextOverflow.ellipsis)),
+                      ],
                     ),
                   ],
                 ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    const Icon(Icons.location_on_outlined, size: 12, color: AppTheme.textGrey),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        location,
-                        style: const TextStyle(color: AppTheme.textGrey, fontSize: 12),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
+              ),
+            ],
+          ),
+          if (isHilang) ...[
+            const SizedBox(height: 12),
+            const Divider(height: 1),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton.icon(
+                  onPressed: () => _showClaimsDialog(reportId, title),
+                  icon: const Icon(Icons.assignment_ind_outlined, size: 16),
+                  label: const Text('Lihat Klaim Masuk', style: TextStyle(fontSize: 13)),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  createdAt != null ? '${createdAt.toDate().day}/${createdAt.toDate().month}/${createdAt.toDate().year}' : '-',
-                  style: const TextStyle(color: AppTheme.textGrey, fontSize: 11),
+                const SizedBox(width: 8),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => DetailItemScreen(reportId: reportId)));
+                  },
+                  style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primary, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 16)),
+                  child: const Text('Detail', style: TextStyle(fontSize: 13)),
                 ),
               ],
             ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  void _showClaimsDialog(String reportId, String itemName) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.75,
+        decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: Colors.black12))),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Klaim: $itemName', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
+                ],
+              ),
+            ),
+            Expanded(
+              child: StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance.collection('claims').where('reportId', isEqualTo: reportId).snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+                  final claims = snapshot.data?.docs ?? [];
+                  if (claims.isEmpty) return const Center(child: Text('Belum ada klaim masuk.'));
+
+                  return ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: claims.length,
+                    itemBuilder: (context, index) {
+                      final claim = claims[index];
+                      final data = claim.data() as Map<String, dynamic>;
+                      return _buildClaimItem(claim.id, reportId, data);
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildClaimItem(String claimId, String reportId, Map<String, dynamic> data) {
+    final claimantEmail = data['claimantEmail'] ?? 'User';
+    final status = data['status'] ?? 'PENDING';
+    final answers = data['answers'] as List<dynamic>? ?? [];
+    final proofUrl = data['proofImageUrl'] as String?;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(border: Border.all(color: AppTheme.inputBorder), borderRadius: BorderRadius.circular(12)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(claimantEmail.split('@')[0], style: const TextStyle(fontWeight: FontWeight.bold)),
+              Text(status, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: status == 'APPROVED' ? Colors.green : Colors.orange)),
+            ],
           ),
+          const SizedBox(height: 12),
+          const Text('Jawaban Pertanyaan:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+          ...answers.map((a) => Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text('Q: ${a['question']}\nA: ${a['answer']}', style: const TextStyle(fontSize: 12, color: Colors.black87)),
+          )),
+          if (proofUrl != null) ...[
+            const SizedBox(height: 12),
+            const Text('Foto Bukti:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.network(proofUrl, height: 150, width: double.infinity, fit: BoxFit.cover)),
+          ],
+          if (status == 'PENDING') ...[
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(child: OutlinedButton(onPressed: () => _reportService.updateClaimStatus(claimId, reportId, 'REJECTED'), child: const Text('Tolak'))),
+                const SizedBox(width: 12),
+                Expanded(child: ElevatedButton(onPressed: () => _reportService.updateClaimStatus(claimId, reportId, 'APPROVED'), style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white), child: const Text('Setujui'))),
+              ],
+            ),
+          ],
         ],
       ),
     );

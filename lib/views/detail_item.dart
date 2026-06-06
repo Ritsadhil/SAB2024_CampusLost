@@ -6,6 +6,7 @@ import '../theme/widgets.dart';
 import '../services/report_service.dart';
 import '../services/chat_service.dart';
 import 'chat_detail_screen.dart';
+import 'claim_verification_screen.dart';
 
 class DetailItemScreen extends StatefulWidget {
   final String reportId;
@@ -237,11 +238,38 @@ class _DetailItemScreenState extends State<DetailItemScreen> {
                         const SizedBox(height: 20),
                         _buildSection('Lokasi', location, icon: Icons.location_on_outlined),
                         const SizedBox(height: 24),
-                        AppButton(
-                          text: 'Hubungi Pelapor',
-                          isLoading: _isChatLoading,
-                          onPressed: () => _startChat(data),
-                        ),
+                        if (status != 'SELESAI / CLAIMED') ...[
+                          AppButton(
+                            text: 'Hubungi Pelapor',
+                            isLoading: _isChatLoading,
+                            onPressed: () => _startChat(data),
+                          ),
+                          const SizedBox(height: 12),
+                          if (status == 'HILANG')
+                            OutlinedButton(
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => ClaimVerificationScreen(
+                                      reportId: widget.reportId,
+                                      reporterId: data['userId'],
+                                      itemName: title,
+                                      location: location,
+                                      secretQuestions: data['secretQuestions'] ?? [],
+                                    ),
+                                  ),
+                                );
+                              },
+                              style: OutlinedButton.styleFrom(
+                                minimumSize: const Size(double.infinity, 50),
+                                foregroundColor: AppTheme.primary,
+                                side: const BorderSide(color: AppTheme.primary),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                              child: const Text('Saya Menemukan Barang Ini'),
+                            ),
+                        ],
                         const SizedBox(height: 12),
                         OutlinedButton(
                           onPressed: () {},
