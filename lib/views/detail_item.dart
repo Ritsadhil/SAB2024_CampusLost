@@ -8,6 +8,7 @@ import '../services/chat_service.dart';
 import 'chat_detail_screen.dart';
 import 'claim_verification_screen.dart';
 
+import 'package:flutter/foundation.dart'; // Import kIsWeb
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class DetailItemScreen extends StatefulWidget {
@@ -205,7 +206,18 @@ class _DetailItemScreenState extends State<DetailItemScreen> {
                             width: double.infinity,
                             height: 250,
                             fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image_outlined, size: 80, color: Colors.grey),
+                            errorBuilder: (context, error, stackTrace) {
+                              return Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(Icons.broken_image_outlined, size: 48, color: Colors.grey),
+                                    const SizedBox(height: 8),
+                                    Text('Gagal memuat gambar', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                                  ],
+                                ),
+                              );
+                            },
                             loadingBuilder: (context, child, loadingProgress) {
                               if (loadingProgress == null) return child;
                               return const Center(child: CircularProgressIndicator());
@@ -274,11 +286,16 @@ class _DetailItemScreenState extends State<DetailItemScreen> {
                                   Marker(
                                     markerId: const MarkerId('item_location'),
                                     position: LatLng(lat, lng),
+                                    infoWindow: InfoWindow(title: title, snippet: location),
                                   ),
                                 },
-                                zoomControlsEnabled: false,
+                                zoomControlsEnabled: true,
                                 mapToolbarEnabled: true,
                                 myLocationButtonEnabled: false,
+                                mapType: MapType.normal,
+                                onMapCreated: (GoogleMapController controller) {
+                                  // Optional: do something when map is ready
+                                },
                               ),
                             ),
                           ),

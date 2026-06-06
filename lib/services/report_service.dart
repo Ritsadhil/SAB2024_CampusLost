@@ -1,19 +1,25 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'dart:io';
+import 'dart:typed_data';
 
 class ReportService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
 
-  // UPLOAD: Upload image to Firebase Storage
-  Future<String?> uploadReportImage(File imageFile) async {
+  // UPLOAD: Upload image to Firebase Storage (Cross-platform)
+  Future<String?> uploadReportImage(Uint8List fileBytes) async {
     try {
       final String fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
       final Reference ref = _storage.ref().child('reports').child(fileName);
-      final UploadTask uploadTask = ref.putFile(imageFile);
+      
+      // Menggunakan putData agar kompetibel dengan Web dan Mobile
+      final UploadTask uploadTask = ref.putData(
+        fileBytes,
+        SettableMetadata(contentType: 'image/jpeg'),
+      );
+
       final TaskSnapshot snapshot = await uploadTask;
       return await snapshot.ref.getDownloadURL();
     } catch (e) {

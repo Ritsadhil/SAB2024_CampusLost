@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:geolocator/geolocator.dart';
-import 'dart:io';
+import 'dart:typed_data';
 import '../theme/app_theme.dart';
 import '../theme/widgets.dart';
 import '../services/report_service.dart';
@@ -33,7 +33,8 @@ class _ReportLostScreenState extends State<ReportLostScreen> {
 
   bool _isPrivateDescription = false;
   bool _isLoading = false;
-  File? _selectedImage;
+  XFile? _selectedImageFile;
+  Uint8List? _imageBytes;
   double? _lat;
   double? _lng;
   
@@ -55,8 +56,10 @@ class _ReportLostScreenState extends State<ReportLostScreen> {
   Future<void> _pickImage() async {
     final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
     if (image != null) {
+      final bytes = await image.readAsBytes();
       setState(() {
-        _selectedImage = File(image.path);
+        _selectedImageFile = image;
+        _imageBytes = bytes;
       });
     }
   }
@@ -224,9 +227,9 @@ class _ReportLostScreenState extends State<ReportLostScreen> {
               border: Border.all(color: AppTheme.inputBorder, width: 2), 
               borderRadius: BorderRadius.circular(8), 
               color: AppTheme.inputFill,
-              image: _selectedImage != null ? DecorationImage(image: FileImage(_selectedImage!), fit: BoxFit.cover) : null,
+              image: _imageBytes != null ? DecorationImage(image: MemoryImage(_imageBytes!), fit: BoxFit.cover) : null,
             ),
-            child: _selectedImage == null ? Column(
+            child: _imageBytes == null ? Column(
               mainAxisAlignment: MainAxisAlignment.center, 
               children: [
                 Icon(Icons.image_outlined, size: 40, color: AppTheme.textGrey.withValues(alpha: 0.5)), 
@@ -344,8 +347,8 @@ class _ReportLostScreenState extends State<ReportLostScreen> {
 
     try {
       String? imageUrl;
-      if (_selectedImage != null) {
-        imageUrl = await _reportService.uploadReportImage(_selectedImage!);
+      if (_imageBytes != null) {
+        imageUrl = await _reportService.uploadReportImage(_imageBytes!);
       }
 
       List<Map<String, String>> secretQuestionsData = [];
