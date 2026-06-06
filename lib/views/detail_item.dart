@@ -11,6 +11,8 @@ import 'claim_verification_screen.dart';
 import 'package:flutter/foundation.dart'; // Import kIsWeb
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
+import 'package:url_launcher/url_launcher.dart'; // Import url_launcher
+
 class DetailItemScreen extends StatefulWidget {
   final String reportId;
 
@@ -100,11 +102,17 @@ class _DetailItemScreenState extends State<DetailItemScreen> {
     return Colors.grey;
   }
 
-  Widget _buildSection(String title, String content, {IconData? icon}) {
+  Widget _buildSection(String title, String content, {IconData? icon, Widget? trailing}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textDark)),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textDark)),
+            if (trailing != null) trailing,
+          ],
+        ),
         const SizedBox(height: 8),
         Container(
           width: double.infinity,
@@ -264,7 +272,21 @@ class _DetailItemScreenState extends State<DetailItemScreen> {
                         const SizedBox(height: 20),
                         _buildSection('Deskripsi', description),
                         const SizedBox(height: 20),
-                        _buildSection('Lokasi', location, icon: Icons.location_on_outlined),
+                        _buildSection(
+                          'Lokasi', 
+                          location, 
+                          icon: Icons.location_on_outlined,
+                          trailing: (lat != null && lng != null) ? TextButton.icon(
+                            onPressed: () async {
+                              final url = Uri.parse('https://www.google.com/maps/search/?api=1&query=$lat,$lng');
+                              if (await canLaunchUrl(url)) {
+                                await launchUrl(url);
+                              }
+                            },
+                            icon: const Icon(Icons.open_in_new, size: 14),
+                            label: const Text('Buka di Maps', style: TextStyle(fontSize: 12)),
+                          ) : null,
+                        ),
                         
                         if (lat != null && lng != null) ...[
                           const SizedBox(height: 12),
