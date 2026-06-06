@@ -178,6 +178,27 @@ class ReportService {
         .snapshots();
   }
 
+  // READ: Get user profile (combine Auth + Firestore user data)
+  Future<Map<String, dynamic>> getUserProfile(String uid) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      final userDoc = await _firestore.collection('users').doc(uid).get();
+      final data = userDoc.data();
+
+      return {
+        'uid': uid,
+        'email': user?.email,
+        'displayName': user?.displayName ?? user?.email?.split('@')[0] ?? 'Pengguna',
+        'photoUrl': user?.photoURL,
+        'stats': (data?['stats'] as Map?)?.cast<String, dynamic>() ?? <String, dynamic>{},
+        'phone': data?['phone'] ?? '',
+        'address': data?['address'] ?? '',
+      };
+    } catch (e) {
+      throw Exception('Gagal mengambil profil: $e');
+    }
+  }
+
   // --- CLAIM & VERIFICATION SYSTEM ---
 
   // SUBMIT: Penemu mengirim klaim (jawaban pertanyaan rahasia + bukti)
