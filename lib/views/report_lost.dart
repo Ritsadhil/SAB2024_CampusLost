@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'dart:typed_data';
 import '../theme/app_theme.dart';
 import '../theme/widgets.dart';
@@ -35,8 +36,11 @@ class _ReportLostScreenState extends State<ReportLostScreen> {
   bool _isLoading = false;
   XFile? _selectedImageFile;
   Uint8List? _imageBytes;
+  
+  // Location
   double? _lat;
   double? _lng;
+  GoogleMapController? _mapController;
   
   final ReportService _reportService = ReportService();
   final ImagePicker _picker = ImagePicker();
@@ -103,8 +107,13 @@ class _ReportLostScreenState extends State<ReportLostScreen> {
       setState(() {
         _lat = position.latitude;
         _lng = position.longitude;
-        _locationCtrl.text = "Lokasi Live terdeteksi (${_lat!.toStringAsFixed(4)}, ${_lng!.toStringAsFixed(4)})";
+        _locationCtrl.text = "Lokasi terdeteksi secara presisi";
       });
+      
+      _mapController?.animateCamera(
+        CameraUpdate.newLatLngZoom(LatLng(_lat!, _lng!), 16),
+      );
+
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Lokasi berhasil diambil!'), backgroundColor: Colors.green));
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal mengambil lokasi: $e')));
@@ -218,6 +227,42 @@ class _ReportLostScreenState extends State<ReportLostScreen> {
         AppTextField(label: 'Tanggal Hilang', hint: 'Pilih tanggal', controller: _dateCtrl, validator: (v) => (v == null || v.isEmpty) ? 'Wajib diisi' : null, suffixWidget: IconButton(icon: const Icon(Icons.calendar_today_rounded, size: 20), onPressed: _selectDate)),
         const SizedBox(height: 16),
         AppTextField(label: 'Lokasi Hilang', hint: 'Misal: Gedung Balkiromati Lt. 2', controller: _locationCtrl, validator: (v) => (v == null || v.isEmpty) ? 'Wajib diisi' : null, suffixWidget: IconButton(icon: const Icon(Icons.my_location_rounded, size: 20), onPressed: _getCurrentLocation)),
+        const SizedBox(height: 16),
+        
+        // INTERACTIVE MAP
+        Container(
+          height: 200,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppTheme.inputBorder),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: GoogleMap(
+              initialCameraPosition: const CameraPosition(
+                target: LatLng(-6.9147, 107.6098), // Default Bandung
+                zoom: 13,
+              ),
+              onMapCreated: (controller) => _mapController = controller,
+              onTap: (LatLng pos) {
+                setState(() {
+                  _lat = pos.latitude;
+                  _lng = pos.longitude;
+                  _locationCtrl.text = "Pin diletakkan di peta";
+                });
+              },
+              markers: _lat != null && _lng != null ? {
+                Marker(
+                  markerId: const MarkerId('picked_loc'),
+                  position: LatLng(_lat!, _lng!),
+                )
+              } : {},
+              myLocationButtonEnabled: false,
+              zoomControlsEnabled: true,
+            ),
+          ),
+        ),
         const SizedBox(height: 16),
         GestureDetector(
           onTap: _pickImage,
