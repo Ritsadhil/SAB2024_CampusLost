@@ -57,6 +57,9 @@ class ReportService {
         'createdAt': FieldValue.serverTimestamp(),
       });
 
+      // Pemicu Matchmaking
+      _checkMatchmaking(itemName, category, 'LOST', currentUser.uid);
+
     } catch (e) {
       throw Exception('Gagal menyimpan laporan: $e');
     }
@@ -93,8 +96,43 @@ class ReportService {
         'createdAt': FieldValue.serverTimestamp(),
       });
 
+      // Pemicu Matchmaking
+      _checkMatchmaking(itemName, category, 'FOUND', currentUser.uid);
+
     } catch (e) {
       throw Exception('Gagal menyimpan laporan temuan: $e');
+    }
+  }
+
+  // --- PRIVATE HELPERS ---
+
+  // Logika Matchmaking Otomatis
+  Future<void> _checkMatchmaking(String name, String category, String type, String currentUid) async {
+    final oppositeType = type == 'LOST' ? 'FOUND' : 'LOST';
+    
+    // Cari laporan dengan tipe berlawanan dan kategori sama
+    final matches = await _firestore.collection('reports')
+        .where('type', isEqualTo: oppositeType)
+        .where('category', isEqualTo: category)
+        .get();
+
+    for (var doc in matches.docs) {
+      final matchName = doc['itemName'].toString().toLowerCase();
+      final searchName = name.toLowerCase();
+
+      // Cek kemiripan simpel (jika mengandung kata yang sama)
+      if (matchName.contains(searchName) || searchName.contains(matchName)) {
+        // Kirim notifikasi sistem ke kedua belah pihak
+        final otherUid = doc['userId'];
+        
+        await _firestore.collection('notifications').add({
+          'uids': [currentUid, otherUid],
+          'title': 'Kecocokan Ditemukan!',
+          'message': 'Ada laporan "${doc['itemName']}" yang mungkin cocok dengan barang Anda.',
+          'reportId': doc.id,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      }
     }
   }
 

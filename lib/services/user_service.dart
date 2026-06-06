@@ -35,4 +35,21 @@ class UserService {
   Stream<DocumentSnapshot> getUserStatsStream(String uid) {
     return _firestore.collection('users').doc(uid).snapshots();
   }
+
+  // Admin: Toggle Banned Status
+  Future<void> toggleUserBan(String uid, bool isBanned) async {
+    try {
+      await _firestore.collection('users').doc(uid).update({
+        'isBanned': isBanned,
+        'bannedAt': isBanned ? FieldValue.serverTimestamp() : null,
+      });
+    } catch (e) {
+      throw Exception('Gagal memproses status akun: $e');
+    }
+  }
+
+  // Admin: Get All Users
+  Stream<QuerySnapshot> getAllUsersStream() {
+    return _firestore.collection('users').snapshots();
+  }
 }

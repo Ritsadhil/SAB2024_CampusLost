@@ -1,6 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:lottie/lottie.dart';
 import 'app_theme.dart';
 import '../services/chat_service.dart';
+
+class LottieLoading extends StatelessWidget {
+  final double size;
+  const LottieLoading({super.key, this.size = 100});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Lottie.network(
+        'https://assets9.lottiefiles.com/packages/lf20_st968h.json', // Animasi loading box/search
+        width: size,
+        height: size,
+        errorBuilder: (context, error, stackTrace) => const CircularProgressIndicator(),
+      ),
+    );
+  }
+}
 
 class NotificationBadge extends StatelessWidget {
   final IconData icon;
