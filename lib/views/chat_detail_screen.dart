@@ -23,6 +23,12 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   final Color primaryBlue = const Color(0xFF0D47A1);
 
   @override
+  void initState() {
+    super.initState();
+    _chatService.markAsRead(widget.chatId);
+  }
+
+  @override
   void dispose() {
     _messageCtrl.dispose();
     super.dispose();

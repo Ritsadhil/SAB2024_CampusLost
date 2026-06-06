@@ -41,7 +41,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const Text('Silakan login terlebih dahulu'),
                   const SizedBox(height: 16),
                   ElevatedButton(
-                    onPressed: () => Navigator.pushReplacementNamed(context, '/login'),
+                    onPressed: () => Navigator.pushNamed(context, '/login'),
                     child: const Text('Login'),
                   ),
                 ],
@@ -296,7 +296,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
           TextButton(
             onPressed: () {
-              _auth.signOut().then((_) => Navigator.pushReplacementNamed(context, '/login'));
+              _auth.signOut().then((_) {
+                if (!mounted) return;
+                Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+              });
             },
             child: const Text('Ya, Logout'),
           ),

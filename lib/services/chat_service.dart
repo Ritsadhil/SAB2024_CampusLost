@@ -27,10 +27,39 @@ class ChatService {
         .snapshots();
   }
 
+  // Menandai chat sebagai sudah dibaca
+  Future<void> markAsRead(String chatId) async {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return;
+
+    await _firestore.collection('chats').doc(chatId).update({
+      'unreadBy': FieldValue.arrayRemove([uid])
+    });
+  }
+
+  // Mendapatkan jumlah chat yang belum dibaca
+  Stream<int> getUnreadCountStream() {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return Stream.value(0);
+
+    return _firestore
+        .collection('chats')
+        .where('unreadBy', arrayContains: uid)
+        .snapshots()
+        .map((snapshot) => snapshot.docs.length);
+  }
+
   // Mengirim pesan
   Future<void> sendMessage(String chatId, String text) async {
     final uid = _auth.currentUser?.uid;
     if (uid == null || text.trim().isEmpty) return;
+
+    // Ambil data chat untuk mengetahui siapa yang harus ditandai unread
+    final chatDoc = await _firestore.collection('chats').doc(chatId).get();
+    final List participants = chatDoc.data()?['participants'] ?? [];
+    
+    // Semua participant kecuali pengirim dianggap belum baca
+    final unreadBy = participants.where((p) => p != uid).toList();
 
     final batch = _firestore.batch();
     
@@ -53,7 +82,8 @@ class ChatService {
       'lastMessage': text.trim(),
       'lastMessageAt': timestamp,
       'lastSenderId': uid,
-      'updatedAt': timestamp, // Tambahan untuk memicu stream
+      'unreadBy': FieldValue.arrayUnion(unreadBy),
+      'updatedAt': timestamp,
     });
 
     await batch.commit();
@@ -64,7 +94,6 @@ class ChatService {
     final currentUid = _auth.currentUser?.uid;
     if (currentUid == null) throw Exception('User not logged in');
 
-    // Cek apakah chat sudah ada (khusus untuk laporan tertentu)
     final existingChat = await _firestore
         .collection('chats')
         .where('reportId', isEqualTo: reportId)
@@ -78,7 +107,6 @@ class ChatService {
       }
     }
 
-    // Jika belum ada, buat baru
     final newChatRef = _firestore.collection('chats').doc();
     final timestamp = FieldValue.serverTimestamp();
     
@@ -93,6 +121,7 @@ class ChatService {
       'lastMessage': '',
       'lastMessageAt': timestamp,
       'createdAt': timestamp,
+      'unreadBy': [],
     });
 
     return newChatRef.id;

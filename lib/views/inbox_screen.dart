@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'chat_detail_screen.dart';
 import '../services/chat_service.dart';
+import '../theme/widgets.dart';
 
 class InboxScreen extends StatefulWidget {
   const InboxScreen({super.key});
@@ -36,6 +37,12 @@ class _InboxScreenState extends State<InboxScreen> {
           ),
         ),
         centerTitle: true,
+        actions: [
+          NotificationBadge(
+            icon: Icons.notifications_none_rounded,
+            onTap: () => setState(() => _selectedIndex = 1),
+          ),
+        ],
       ),
       body: Column(
         children: [
