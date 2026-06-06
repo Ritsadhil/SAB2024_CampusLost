@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:geolocator/geolocator.dart';
 import 'dart:io';
 import '../theme/app_theme.dart';
 import '../theme/widgets.dart';
@@ -26,6 +27,9 @@ class _ReportFoundScreenState extends State<ReportFoundScreen> {
   String _storageStatus = 'Dipegang Sendiri';
   bool _isLoading = false;
   File? _selectedImage;
+  double? _lat;
+  double? _lng;
+
   final ReportService _reportService = ReportService();
   final ImagePicker _picker = ImagePicker();
 
@@ -34,7 +38,8 @@ class _ReportFoundScreenState extends State<ReportFoundScreen> {
     super.initState();
     _itemNameCtrl = TextEditingController();
     _categoryCtrl = TextEditingController();
-    _dateCtrl = TextEditingController();
+    final now = DateTime.now();
+    _dateCtrl = TextEditingController(text: "${now.day}/${now.month}/${now.year}");
     _locationCtrl = TextEditingController();
     _descriptionCtrl = TextEditingController();
   }
@@ -45,6 +50,55 @@ class _ReportFoundScreenState extends State<ReportFoundScreen> {
       setState(() {
         _selectedImage = File(image.path);
       });
+    }
+  }
+
+  Future<void> _selectDate() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+    );
+    if (picked != null) {
+      setState(() {
+        _dateCtrl.text = "${picked.day}/${picked.month}/${picked.year}";
+      });
+    }
+  }
+
+  Future<void> _getCurrentLocation() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Layanan lokasi dimatikan')));
+      return;
+    }
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Izin lokasi ditolak')));
+        return;
+      }
+    }
+
+    setState(() => _isLoading = true);
+    try {
+      Position position = await Geolocator.getCurrentPosition();
+      setState(() {
+        _lat = position.latitude;
+        _lng = position.longitude;
+        _locationCtrl.text = "Lokasi Live terdeteksi (${_lat!.toStringAsFixed(4)}, ${_lng!.toStringAsFixed(4)})";
+      });
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Lokasi berhasil diambil!'), backgroundColor: Colors.green));
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal mengambil lokasi: $e')));
+    } finally {
+      setState(() => _isLoading = false);
     }
   }
 
@@ -147,9 +201,9 @@ class _ReportFoundScreenState extends State<ReportFoundScreen> {
         const SizedBox(height: 16),
         AppTextField(label: 'Kategori', hint: 'Pilih kategori', controller: _categoryCtrl, validator: (v) => v?.isEmpty ?? true ? 'Wajib diisi' : null),
         const SizedBox(height: 16),
-        AppTextField(label: 'Tanggal Ditemukan', hint: 'Pilih tanggal', controller: _dateCtrl, validator: (v) => v?.isEmpty ?? true ? 'Wajib diisi' : null),
+        AppTextField(label: 'Tanggal Ditemukan', hint: 'Pilih tanggal', controller: _dateCtrl, validator: (v) => v?.isEmpty ?? true ? 'Wajib diisi' : null, suffixWidget: IconButton(icon: const Icon(Icons.calendar_today_rounded, size: 20), onPressed: _selectDate)),
         const SizedBox(height: 16),
-        AppTextField(label: 'Lokasi Penemuan', hint: 'Misal: Parkir Teknik Lt. 2', controller: _locationCtrl, validator: (v) => v?.isEmpty ?? true ? 'Wajib diisi' : null),
+        AppTextField(label: 'Lokasi Penemuan', hint: 'Misal: Parkir Teknik Lt. 2', controller: _locationCtrl, validator: (v) => v?.isEmpty ?? true ? 'Wajib diisi' : null, suffixWidget: IconButton(icon: const Icon(Icons.my_location_rounded, size: 20), onPressed: _getCurrentLocation)),
         const SizedBox(height: 16),
         GestureDetector(
           onTap: _pickImage,
@@ -236,6 +290,8 @@ class _ReportFoundScreenState extends State<ReportFoundScreen> {
         description: _descriptionCtrl.text.trim(),
         storageStatus: _storageStatus,
         imageUrl: imageUrl,
+        lat: _lat,
+        lng: _lng,
       );
 
       if (mounted) {

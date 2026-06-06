@@ -8,6 +8,8 @@ import '../services/chat_service.dart';
 import 'chat_detail_screen.dart';
 import 'claim_verification_screen.dart';
 
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+
 class DetailItemScreen extends StatefulWidget {
   final String reportId;
 
@@ -169,6 +171,8 @@ class _DetailItemScreenState extends State<DetailItemScreen> {
         final description = data['publicDescription'] ?? 'Tidak ada deskripsi';
         final createdAt = data['createdAt'] as Timestamp?;
         final imageUrl = data['imageUrl'] as String?;
+        final lat = data['lat'] as double?;
+        final lng = data['lng'] as double?;
         final statusColor = _getStatusColor(status);
 
         return Scaffold(
@@ -191,12 +195,24 @@ class _DetailItemScreenState extends State<DetailItemScreen> {
                     height: 250,
                     decoration: BoxDecoration(
                       color: AppTheme.inputFill,
-                      image: imageUrl != null ? DecorationImage(image: NetworkImage(imageUrl), fit: BoxFit.cover) : null,
                     ),
-                    child: imageUrl == null ? Stack(
+                    child: Stack(
                       alignment: Alignment.center,
                       children: [
-                        Icon(Icons.image_outlined, size: 80, color: AppTheme.textGrey.withValues(alpha: 0.3)),
+                        if (imageUrl != null && imageUrl.isNotEmpty)
+                          Image.network(
+                            imageUrl,
+                            width: double.infinity,
+                            height: 250,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image_outlined, size: 80, color: Colors.grey),
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return const Center(child: CircularProgressIndicator());
+                            },
+                          )
+                        else
+                          Icon(Icons.image_outlined, size: 80, color: AppTheme.textGrey.withValues(alpha: 0.3)),
                         Positioned(
                           top: 16,
                           right: 16,
@@ -213,7 +229,7 @@ class _DetailItemScreenState extends State<DetailItemScreen> {
                           ),
                         ),
                       ],
-                    ) : null,
+                    ),
                   ),
                   Padding(
                     padding: const EdgeInsets.all(20),
@@ -237,6 +253,37 @@ class _DetailItemScreenState extends State<DetailItemScreen> {
                         _buildSection('Deskripsi', description),
                         const SizedBox(height: 20),
                         _buildSection('Lokasi', location, icon: Icons.location_on_outlined),
+                        
+                        if (lat != null && lng != null) ...[
+                          const SizedBox(height: 12),
+                          Container(
+                            height: 180,
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: AppTheme.inputBorder),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: GoogleMap(
+                                initialCameraPosition: CameraPosition(
+                                  target: LatLng(lat, lng),
+                                  zoom: 15,
+                                ),
+                                markers: {
+                                  Marker(
+                                    markerId: const MarkerId('item_location'),
+                                    position: LatLng(lat, lng),
+                                  ),
+                                },
+                                zoomControlsEnabled: false,
+                                mapToolbarEnabled: true,
+                                myLocationButtonEnabled: false,
+                              ),
+                            ),
+                          ),
+                        ],
+
                         const SizedBox(height: 24),
                         if (status != 'SELESAI / CLAIMED') ...[
                           AppButton(

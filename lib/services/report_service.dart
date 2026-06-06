@@ -33,6 +33,8 @@ class ReportService {
     required String privateDescription,
     required List<Map<String, String>> secretQuestions,
     String? imageUrl,
+    double? lat,
+    double? lng,
   }) async {
     try {
       final User? currentUser = _auth.currentUser;
@@ -47,6 +49,8 @@ class ReportService {
         'category': category,
         'dateLost': date,
         'location': location,
+        'lat': lat,
+        'lng': lng,
         'publicDescription': publicDescription,
         'hasPrivateDescription': hasPrivateDescription,
         'privateDescription': hasPrivateDescription ? privateDescription : '',
@@ -74,6 +78,8 @@ class ReportService {
     required String description,
     required String storageStatus,
     String? imageUrl,
+    double? lat,
+    double? lng,
   }) async {
     try {
       final User? currentUser = _auth.currentUser;
@@ -88,6 +94,8 @@ class ReportService {
         'category': category,
         'dateFound': date,
         'location': location,
+        'lat': lat,
+        'lng': lng,
         'publicDescription': description,
         'storageStatus': storageStatus,
         'imageUrl': imageUrl,
