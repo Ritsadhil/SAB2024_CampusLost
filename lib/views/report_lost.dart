@@ -236,30 +236,47 @@ class _ReportLostScreenState extends State<ReportLostScreen> {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: AppTheme.inputBorder),
+            color: Colors.grey.shade100,
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(12),
-            child: GoogleMap(
-              initialCameraPosition: const CameraPosition(
-                target: LatLng(-6.9147, 107.6098), // Default Bandung
-                zoom: 13,
-              ),
-              onMapCreated: (controller) => _mapController = controller,
-              onTap: (LatLng pos) {
-                setState(() {
-                  _lat = pos.latitude;
-                  _lng = pos.longitude;
-                  _locationCtrl.text = "Pin diletakkan di peta";
-                });
-              },
-              markers: _lat != null && _lng != null ? {
-                Marker(
-                  markerId: const MarkerId('picked_loc'),
-                  position: LatLng(_lat!, _lng!),
-                )
-              } : {},
-              myLocationButtonEnabled: false,
-              zoomControlsEnabled: true,
+            child: Stack(
+              children: [
+                GoogleMap(
+                  initialCameraPosition: const CameraPosition(
+                    target: LatLng(-6.9147, 107.6098),
+                    zoom: 13,
+                  ),
+                  onMapCreated: (controller) => _mapController = controller,
+                  onTap: (LatLng pos) {
+                    setState(() {
+                      _lat = pos.latitude;
+                      _lng = pos.longitude;
+                      _locationCtrl.text = "Pin diletakkan di peta";
+                    });
+                  },
+                  markers: _lat != null && _lng != null ? {
+                    Marker(
+                      markerId: const MarkerId('picked_loc'),
+                      position: LatLng(_lat!, _lng!),
+                    )
+                  } : {},
+                  myLocationButtonEnabled: false,
+                  zoomControlsEnabled: true,
+                ),
+                // Overlay if API Key might be missing
+                IgnorePointer(
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    alignment: Alignment.center,
+                    child: Text(
+                      'Peta memerlukan API Key aktif.\n(Cek instruksi di index.html)',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 10, color: Colors.black.withValues(alpha: 0.3)),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),

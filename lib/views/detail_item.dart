@@ -214,6 +214,9 @@ class _DetailItemScreenState extends State<DetailItemScreen> {
                             width: double.infinity,
                             height: 250,
                             fit: BoxFit.cover,
+                            headers: const {
+                              "Access-Control-Allow-Origin": "*",
+                            },
                             errorBuilder: (context, error, stackTrace) {
                               return Center(
                                 child: Column(
@@ -221,7 +224,7 @@ class _DetailItemScreenState extends State<DetailItemScreen> {
                                   children: [
                                     const Icon(Icons.broken_image_outlined, size: 48, color: Colors.grey),
                                     const SizedBox(height: 8),
-                                    Text('Gagal memuat gambar', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                                    Text('Gagal memuat gambar (Cek CORS)', style: TextStyle(fontSize: 10, color: Colors.grey.shade600)),
                                   ],
                                 ),
                               );
