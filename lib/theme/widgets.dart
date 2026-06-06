@@ -1,5 +1,80 @@
 import 'package:flutter/material.dart';
+import 'package:lottie/lottie.dart';
 import 'app_theme.dart';
+import '../services/chat_service.dart';
+
+class LottieLoading extends StatelessWidget {
+  final double size;
+  const LottieLoading({super.key, this.size = 100});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Lottie.network(
+        'https://assets9.lottiefiles.com/packages/lf20_st968h.json', // Animasi loading box/search
+        width: size,
+        height: size,
+        errorBuilder: (context, error, stackTrace) => const CircularProgressIndicator(),
+      ),
+    );
+  }
+}
+
+class NotificationBadge extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const NotificationBadge({
+    super.key,
+    required this.icon,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        IconButton(
+          icon: Icon(icon, color: AppTheme.textGrey),
+          onPressed: onTap,
+        ),
+        StreamBuilder<int>(
+          stream: ChatService().getUnreadCountStream(),
+          builder: (context, snapshot) {
+            final count = snapshot.data ?? 0;
+            if (count == 0) return const SizedBox.shrink();
+
+            return Positioned(
+              top: 12,
+              right: 12,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: const BoxDecoration(
+                  color: Colors.red,
+                  shape: BoxShape.circle,
+                ),
+                constraints: const BoxConstraints(
+                  minWidth: 16,
+                  minHeight: 16,
+                ),
+                child: Text(
+                  count > 9 ? '9+' : '$count',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 8,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
 
 class AppButton extends StatelessWidget {
   final String text;
@@ -70,6 +145,7 @@ class AppTextField extends StatefulWidget {
   final TextEditingController? controller;
   final String? Function(String?)? validator;
   final Widget? suffixWidget;
+  final int maxLines;
 
   const AppTextField({
     super.key,
@@ -81,6 +157,7 @@ class AppTextField extends StatefulWidget {
     this.controller,
     this.validator,
     this.suffixWidget,
+    this.maxLines = 1,
   });
 
   @override
@@ -109,6 +186,7 @@ class _AppTextFieldState extends State<AppTextField> {
           obscureText: widget.isPassword ? _obscure : false,
           keyboardType: widget.keyboardType,
           validator: widget.validator,
+          maxLines: widget.isPassword ? 1 : widget.maxLines,
           style: const TextStyle(fontSize: 15, color: AppTheme.textDark),
           decoration: InputDecoration(
             hintText: widget.hint,

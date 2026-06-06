@@ -1,9 +1,45 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../services/chat_service.dart';
 
-class ChatDetailScreen extends StatelessWidget {
-  const ChatDetailScreen({super.key});
+class ChatDetailScreen extends StatefulWidget {
+  final String chatId;
+  final String otherUserName;
 
+  const ChatDetailScreen({
+    super.key, 
+    required this.chatId, 
+    required this.otherUserName
+  });
+
+  @override
+  State<ChatDetailScreen> createState() => _ChatDetailScreenState();
+}
+
+class _ChatDetailScreenState extends State<ChatDetailScreen> {
+  final ChatService _chatService = ChatService();
+  final TextEditingController _messageCtrl = TextEditingController();
   final Color primaryBlue = const Color(0xFF0D47A1);
+
+  @override
+  void initState() {
+    super.initState();
+    _chatService.markAsRead(widget.chatId);
+  }
+
+  @override
+  void dispose() {
+    _messageCtrl.dispose();
+    super.dispose();
+  }
+
+  void _sendMessage() {
+    if (_messageCtrl.text.trim().isNotEmpty) {
+      _chatService.sendMessage(widget.chatId, _messageCtrl.text);
+      _messageCtrl.clear();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -21,118 +57,79 @@ class ChatDetailScreen extends StatelessWidget {
         title: Row(
           children: [
             const CircleAvatar(
-              backgroundImage: NetworkImage('https://i.pravatar.cc/150?img=32'),
+              backgroundColor: Color(0xFFEAF0FF),
               radius: 18,
+              child: Icon(Icons.person, size: 20, color: Color(0xFF0D47A1)),
             ),
             const SizedBox(width: 12),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Prof. Eleanor Vance',
-                  style: TextStyle(color: Colors.black87, fontSize: 16, fontWeight: FontWeight.bold),
+                Text(
+                  widget.otherUserName,
+                  style: const TextStyle(color: Colors.black87, fontSize: 16, fontWeight: FontWeight.bold),
                 ),
-                Row(
-                  children: [
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: const BoxDecoration(color: Color(0xFF2962FF), shape: BoxShape.circle),
-                    ),
-                    const SizedBox(width: 4),
-                    const Text('Online', style: TextStyle(color: Color(0xFF2962FF), fontSize: 12)),
-                  ],
-                ),
+                const Text('Online', style: TextStyle(color: Color(0xFF2962FF), fontSize: 12)),
               ],
             ),
           ],
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.more_vert, color: Colors.black87),
-            onPressed: () {},
-          ),
-        ],
       ),
       body: Column(
         children: [
           Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                // Date Badge
-                Center(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade200,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Text(
-                      "Today, 10:24 AM",
-                      style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
+            child: StreamBuilder<QuerySnapshot>(
+              stream: _chatService.getMessagesStream(widget.chatId),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-                // Info Box Context
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF0EDF5), // Light purple/grey tint
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.grey.shade300),
-                  ),
-                  child: Column(
-                    children: [
-                      Icon(Icons.info_outline, size: 20, color: Colors.grey.shade700),
-                      const SizedBox(height: 4),
-                      RichText(
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24.0),
+                      child: Text(
+                        'Error: ${snapshot.error}',
                         textAlign: TextAlign.center,
-                        text: TextSpan(
-                          style: TextStyle(fontSize: 12, color: Colors.grey.shade800, height: 1.4),
-                          children: const [
-                            TextSpan(text: "This chat is regarding your report: "),
-                            TextSpan(text: "Found Engineering Calculator (Casio FX-991EX)", style: TextStyle(fontWeight: FontWeight.bold)),
-                          ],
-                        ),
+                        style: const TextStyle(color: Colors.red),
                       ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 24),
+                    ),
+                  );
+                }
 
-                // Chat Bubbles
-                _buildMessageBubble(
-                  text: "Hello! I saw your post on CampusLost about the Casio calculator found in the Science building library.",
-                  time: "10:25 AM",
-                  isMe: false,
-                ),
-                _buildMessageBubble(
-                  text: "I believe it might be mine. I left it there last night during a study session. Does it have a small scratch on the back cover?",
-                  time: "10:26 AM",
-                  isMe: false,
-                ),
-                _buildMessageBubble(
-                  text: "Hi Prof. Vance. Yes, it does have a distinct scratch on the upper right corner of the back plate.",
-                  time: "10:30 AM",
-                  isMe: true,
-                ),
-                _buildMessageBubble(
-                  text: "I handed it over to the main administration desk at the Student Union building for safekeeping.",
-                  time: "10:31 AM",
-                  isMe: true,
-                ),
-              ],
+                final messages = snapshot.data?.docs ?? [];
+                // ... rest of builder ...
+
+                return ListView.builder(
+                  reverse: true,
+                  padding: const EdgeInsets.all(16),
+                  itemCount: messages.length,
+                  itemBuilder: (context, index) {
+                    final data = messages[index].data() as Map<String, dynamic>;
+                    final isMe = data['senderId'] == FirebaseAuth.instance.currentUser?.uid;
+                    final text = data['text'] ?? '';
+                    final timestamp = data['createdAt'] as Timestamp?;
+                    
+                    return _buildMessageBubble(
+                      text: text,
+                      time: timestamp != null ? _formatTimestamp(timestamp) : 'Sending...',
+                      isMe: isMe,
+                    );
+                  },
+                );
+              },
             ),
           ),
-
-          // Chat Input Area
           _buildBottomInputArea(),
         ],
       ),
     );
+  }
+
+  String _formatTimestamp(Timestamp timestamp) {
+    final date = timestamp.toDate();
+    return '${date.hour}:${date.minute.toString().padLeft(2, '0')}';
   }
 
   Widget _buildMessageBubble({required String text, required String time, required bool isMe}) {
@@ -163,18 +160,9 @@ class ChatDetailScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 4),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                time,
-                style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
-              ),
-              if (isMe) ...[
-                const SizedBox(width: 4),
-                const Icon(Icons.done_all, size: 14, color: Color(0xFF2962FF)),
-              ]
-            ],
+          Text(
+            time,
+            style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
           ),
         ],
       ),
@@ -187,14 +175,12 @@ class ChatDetailScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -5))
+          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, -5))
         ],
       ),
       child: SafeArea(
         child: Row(
           children: [
-            Icon(Icons.attach_file, color: Colors.grey.shade500),
-            const SizedBox(width: 12),
             Expanded(
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -202,8 +188,9 @@ class ChatDetailScreen extends StatelessWidget {
                   color: Colors.grey.shade200,
                   borderRadius: BorderRadius.circular(24),
                 ),
-                child: const TextField(
-                  decoration: InputDecoration(
+                child: TextField(
+                  controller: _messageCtrl,
+                  decoration: const InputDecoration(
                     hintText: "Type your message...",
                     hintStyle: TextStyle(color: Colors.grey),
                     border: InputBorder.none,
@@ -219,7 +206,7 @@ class ChatDetailScreen extends StatelessWidget {
               ),
               child: IconButton(
                 icon: const Icon(Icons.send, color: Colors.white, size: 20),
-                onPressed: () {},
+                onPressed: _sendMessage,
               ),
             ),
           ],

@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../theme/app_theme.dart';
 import '../services/app_service.dart';
+import '../theme/widgets.dart';
 import 'profile.dart';
 import 'search.dart';
 import 'my_reports.dart';
@@ -125,13 +126,9 @@ class _BerandaScreenState extends State<BerandaScreen> {
             ),
           ),
           const Spacer(),
-          IconButton(
-            icon: const Icon(
-              Icons.notifications_none_rounded,
-              color: AppTheme.textGrey,
-              size: 24,
-            ),
-            onPressed: () {
+          NotificationBadge(
+            icon: Icons.notifications_none_rounded,
+            onTap: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const InboxScreen()),

@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../theme/app_theme.dart';
-import '../services/app_service.dart';
-import '../models/user_model.dart';
-import 'login.dart';
+import '../services/report_service.dart';
+import '../services/chat_service.dart';
+import 'edit_profile.dart';
+import 'settings_detail_screen.dart';
+import 'chat_detail_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -12,47 +15,82 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  late User user;
+  late ReportService _reportService;
+  final ChatService _chatService = ChatService();
+  late FirebaseAuth _auth;
+  bool _isAdminLoading = false;
 
   @override
   void initState() {
     super.initState();
-    user = AppService.currentUser;
+    _reportService = ReportService();
+    _auth = FirebaseAuth.instance;
   }
 
   @override
   Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: _auth.authStateChanges(),
+      builder: (context, snapshot) {
+        if (snapshot.data == null) {
+          return Scaffold(
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text('Silakan login terlebih dahulu'),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () => Navigator.pushNamed(context, '/login'),
+                    child: const Text('Login'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        final currentUser = snapshot.data!;
+        return FutureBuilder<Map<String, dynamic>>(
+          future: _reportService.getUserProfile(currentUser.uid),
+          builder: (context, profileSnapshot) {
+            if (profileSnapshot.connectionState == ConnectionState.waiting) {
+              return const Scaffold(body: Center(child: CircularProgressIndicator()));
+            }
+
+            if (profileSnapshot.hasError) {
+              return Scaffold(body: Center(child: Text('Error: ${profileSnapshot.error}')));
+            }
+
+            final profileData = profileSnapshot.data ?? {};
+            return _buildProfileContent(profileData, currentUser);
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildProfileContent(Map<String, dynamic> profileData, User currentUser) {
+    final displayName = profileData['displayName'] ?? 'Pengguna';
+    final email = currentUser.email ?? '';
+    final phone = profileData['phone'] ?? '';
+    final address = profileData['address'] ?? '';
+    final stats = (profileData['stats'] as Map?)?.cast<String, dynamic>() ?? {};
+
     return Scaffold(
       backgroundColor: AppTheme.background,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
         automaticallyImplyLeading: false,
-        // leading: IconButton(
-        //   icon: const Icon(Icons.arrow_back_rounded, color: AppTheme.textDark),
-        //   onPressed: () => Navigator.pop(context),
-        // ),
-        title: const Text(
-          'Profil Saya',
-          style: TextStyle(
-            color: AppTheme.textDark,
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
-          ),
-        ),
+        title: const Text('Profil Saya', style: TextStyle(color: AppTheme.textDark, fontWeight: FontWeight.bold, fontSize: 18)),
         centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.more_vert, color: AppTheme.textGrey),
-            onPressed: () {},
-          ),
-        ],
+        actions: [IconButton(icon: const Icon(Icons.more_vert, color: AppTheme.textGrey), onPressed: () {})],
       ),
       body: SafeArea(
         child: SingleChildScrollView(
           child: Column(
             children: [
-              // Header Section (Gradient Background)
               Container(
                 width: double.infinity,
                 decoration: BoxDecoration(
@@ -75,200 +113,83 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             shape: BoxShape.circle,
                             border: Border.all(color: Colors.white, width: 4),
                           ),
-                          child: Icon(
-                            Icons.person_rounded,
-                            size: 50,
-                            color: AppTheme.primary,
-                          ),
+                          child: const Icon(Icons.person_rounded, size: 50, color: AppTheme.primary),
                         ),
-                        Positioned(
-                          bottom: 0,
-                          right: 0,
-                          child: Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: const BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black12,
-                                  blurRadius: 4,
-                                )
-                              ],
-                            ),
-                            child: Icon(Icons.edit, size: 16, color: AppTheme.primary),
-                          ),
-                        )
                       ],
                     ),
                     const SizedBox(height: 16),
-                    Text(
-                      user.name,
-                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.textDark),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      user.email,
-                      style: const TextStyle(color: AppTheme.textGrey, fontSize: 13),
+                    Text(displayName, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: AppTheme.textDark)),
+                    Text(email, style: const TextStyle(fontSize: 13, color: AppTheme.textGrey)),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        _buildStatCard('${stats['totalReports'] ?? 0}', 'Postingan'),
+                        _buildStatCard('${stats['foundCount'] ?? 0}', 'Jejak Barang'),
+                        _buildStatCard('${stats['claimedCount'] ?? 0}', 'Nomads'),
+                      ],
                     ),
                   ],
                 ),
               ),
-
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
+                padding: const EdgeInsets.all(20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Stats Card
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppTheme.inputBorder),
-                      ),
-                      child: IntrinsicHeight(
-                        child: Row(
-                          children: [
-                            _buildStatItem('${user.totalReports}', 'LAPORAN\nDIBUAT'),
-                            VerticalDivider(color: AppTheme.inputBorder, thickness: 1),
-                            _buildStatItem('${user.foundCount}', 'LAPORAN\nSELESAI'),
-                            VerticalDivider(color: AppTheme.inputBorder, thickness: 1),
-                            _buildStatItem('${user.claimedCount}', 'BARANG\nKEMBALI'),
-                          ],
-                        ),
-                      ),
-                    ),
+                    const Text('Informasi Pribadi', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppTheme.textDark)),
+                    const SizedBox(height: 16),
+                    _buildInfoField('Nama', displayName),
+                    _buildInfoField('No. HP', phone.isEmpty ? '-' : phone),
+                    _buildInfoField('Alamat', address.isEmpty ? '-' : address),
                     const SizedBox(height: 24),
-
-                    // Personal Information
-                    const Text(
-                      'Informasi Pribadi',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textDark),
-                    ),
+                    const Text('Pengaturan Akun', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppTheme.textDark)),
                     const SizedBox(height: 12),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppTheme.inputBorder),
-                      ),
-                      child: Column(
-                        children: [
-                          _buildInfoItem('Nama Lengkap', user.name, false),
-                          Divider(height: 1, color: AppTheme.inputBorder),
-                          _buildInfoItem('Nomor Telepon', user.phone ?? 'Belum diatur', false),
-                          Divider(height: 1, color: AppTheme.inputBorder),
-                          _buildInfoItem('Alamat', user.address ?? 'Belum diatur', false),
-                          Divider(height: 1, color: AppTheme.inputBorder),
-                          Container(
-                            padding: const EdgeInsets.all(16),
-                            color: AppTheme.background,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Text('Email Institusi', style: TextStyle(color: AppTheme.textGrey, fontSize: 12)),
-                                    Icon(Icons.lock_outline, size: 14, color: AppTheme.textGrey),
-                                  ],
-                                ),
-                                const SizedBox(height: 4),
-                                Text(user.email, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppTheme.textDark)),
-                                const SizedBox(height: 4),
-                                Text('Email tidak dapat diubah', style: TextStyle(color: AppTheme.textGrey, fontSize: 11)),
-                              ],
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton(
-                                onPressed: () {},
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppTheme.primary,
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                ),
-                                child: const Text('Edit Profil', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                    _buildSettingsItem(Icons.notifications_outlined, 'Notifikasi'),
+                    _buildSettingsItem(Icons.security_outlined, 'Keamanan'),
+                    _buildSettingsItem(Icons.privacy_tip_outlined, 'Privasi'),
+                    _buildSettingsItem(Icons.help_outline, 'Bantuan'),
+                    _buildSettingsItem(Icons.description_outlined, 'Syarat & Ketentuan'),
+                    _buildSettingsItem(Icons.mail_outline, 'Hubungi Admin'),
                     const SizedBox(height: 24),
-
-                    // Account Settings
-                    const Text(
-                      'Pengaturan Akun',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textDark),
-                    ),
-                    const SizedBox(height: 12),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppTheme.inputBorder),
-                      ),
-                      child: Column(
-                        children: [
-                          _buildSettingItem(Icons.notifications_none_rounded, 'Pengaturan Notifikasi'),
-                          Divider(height: 1, color: AppTheme.inputBorder),
-                          _buildSettingItem(Icons.dark_mode_outlined, 'Tampilan'),
-                          Divider(height: 1, color: AppTheme.inputBorder),
-                          _buildSettingItem(Icons.lock_outline, 'Keamanan'),
-                          Divider(height: 1, color: AppTheme.inputBorder),
-                          _buildSettingItem(Icons.help_outline, 'Bantuan & FAQ'),
-                          Divider(height: 1, color: AppTheme.inputBorder),
-                          _buildSettingItem(Icons.description_outlined, 'Syarat & Ketentuan'),
-                          Divider(height: 1, color: AppTheme.inputBorder),
-                          _buildSettingItem(Icons.mail_outline, 'Hubungi Admin Kampus'),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Logout Button
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        onPressed: () {
-                          showDialog(
-                            context: context,
-                            builder: (context) => AlertDialog(
-                              title: const Text('Keluar dari Aplikasi?'),
-                              content: const Text('Anda akan keluar dan harus login kembali.'),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.pop(context),
-                                  child: const Text('Batal'),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => EditProfileScreen(
+                                    initialName: displayName,
+                                    initialPhone: phone,
+                                    initialAddress: address,
+                                  ),
                                 ),
-                                TextButton(
-                                  onPressed: () {
-                                    Navigator.of(context).pushAndRemoveUntil(
-                                      MaterialPageRoute(builder: (_) => const LoginScreen()),
-                                      (route) => false,
-                                    );
-                                  },
-                                  child: const Text('Keluar', style: TextStyle(color: Colors.red)),
-                                ),
-                              ],
+                              ).then((_) => setState(() {}));
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primary,
+                              foregroundColor: Colors.white,
+                              minimumSize: const Size(double.infinity, 50),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             ),
-                          );
-                        },
-                        icon: const Icon(Icons.logout, size: 18),
-                        label: const Text('Keluar', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.red,
-                          side: const BorderSide(color: Colors.red),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            child: const Text('Edit Profil'),
+                          ),
                         ),
-                      ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => _showLogoutDialog(context),
+                            style: OutlinedButton.styleFrom(
+                              minimumSize: const Size(double.infinity, 50),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            child: const Text('Logout'),
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 32),
                   ],
                 ),
               ),
@@ -279,54 +200,111 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildStatItem(String number, String label) {
-    return Expanded(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        child: Column(
-          children: [
-            Text(
-              number,
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.primary),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 10, color: AppTheme.textGrey, fontWeight: FontWeight.w600),
-            ),
-          ],
-        ),
-      ),
+  Widget _buildStatCard(String value, String label) {
+    return Column(
+      children: [
+        Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.primary)),
+        const SizedBox(height: 4),
+        Text(label, style: const TextStyle(fontSize: 12, color: AppTheme.textGrey)),
+      ],
     );
   }
 
-  Widget _buildInfoItem(String label, String value, bool showEdit) {
+  Widget _buildInfoField(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(label, style: TextStyle(color: AppTheme.textGrey, fontSize: 12)),
-              const SizedBox(height: 4),
-              Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppTheme.textDark)),
-            ],
+          Text(label, style: const TextStyle(fontSize: 12, color: AppTheme.textGrey, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 4),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppTheme.inputBorder),
+            ),
+            child: Text(value, style: const TextStyle(fontSize: 13, color: AppTheme.textDark)),
           ),
-          if (showEdit) Icon(Icons.edit, color: AppTheme.textGrey, size: 18),
         ],
       ),
     );
   }
 
-  Widget _buildSettingItem(IconData icon, String title) {
-    return ListTile(
-      leading: Icon(icon, color: AppTheme.primary, size: 20),
-      title: Text(title, style: const TextStyle(fontSize: 14, color: AppTheme.textDark)),
-      trailing: const Icon(Icons.chevron_right, color: AppTheme.textGrey, size: 20),
-      onTap: () {},
+  Widget _buildSettingsItem(IconData icon, String label) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: GestureDetector(
+        onTap: () async {
+          if (label == 'Hubungi Admin') {
+            setState(() => _isAdminLoading = true);
+            try {
+              final String chatId = await _chatService.getOrCreateAdminChat();
+              if (mounted) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ChatDetailScreen(
+                      chatId: chatId,
+                      otherUserName: 'Admin CampusLost',
+                    ),
+                  ),
+                );
+              }
+            } finally {
+              if (mounted) setState(() => _isAdminLoading = false);
+            }
+          } else {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => SettingsDetailScreen(title: label)),
+            );
+          }
+        },
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: AppTheme.inputBorder.withValues(alpha: 0.5)),
+          ),
+          child: Row(
+            children: [
+              if (label == 'Hubungi Admin' && _isAdminLoading)
+                const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+              else
+                Icon(icon, color: AppTheme.primary, size: 20),
+              const SizedBox(width: 12),
+              Expanded(child: Text(label, style: const TextStyle(fontSize: 14, color: AppTheme.textDark))),
+              const Icon(Icons.chevron_right, color: AppTheme.textGrey),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showLogoutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Apakah Anda yakin ingin logout?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
+          TextButton(
+            onPressed: () {
+              _auth.signOut().then((_) {
+                if (!mounted) return;
+                Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+              });
+            },
+            child: const Text('Ya, Logout'),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -1,4 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
+import 'dart:typed_data';
 import '../theme/app_theme.dart';
 import '../theme/widgets.dart';
 import '../services/report_service.dart';
@@ -21,18 +26,91 @@ class _ReportFoundScreenState extends State<ReportFoundScreen> {
   late TextEditingController _locationCtrl;
   late TextEditingController _descriptionCtrl;
 
-  String _storageStatus = 'Dipegang Sendiri'; // Default status penyimpanan
+  String _storageStatus = 'Dipegang Sendiri';
   bool _isLoading = false;
+  XFile? _selectedImageFile;
+  Uint8List? _imageBytes;
+  
+  // Location
+  double? _lat;
+  double? _lng;
+  final MapController _mapController = MapController();
+
   final ReportService _reportService = ReportService();
+  final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
     super.initState();
     _itemNameCtrl = TextEditingController();
     _categoryCtrl = TextEditingController();
-    _dateCtrl = TextEditingController();
+    final now = DateTime.now();
+    _dateCtrl = TextEditingController(text: "${now.day}/${now.month}/${now.year}");
     _locationCtrl = TextEditingController();
     _descriptionCtrl = TextEditingController();
+  }
+
+  Future<void> _pickImage() async {
+    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+    if (image != null) {
+      final bytes = await image.readAsBytes();
+      setState(() {
+        _selectedImageFile = image;
+        _imageBytes = bytes;
+      });
+    }
+  }
+
+  Future<void> _selectDate() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+    );
+    if (picked != null) {
+      setState(() {
+        _dateCtrl.text = "${picked.day}/${picked.month}/${picked.year}";
+      });
+    }
+  }
+
+  Future<void> _getCurrentLocation() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Layanan lokasi dimatikan')));
+      return;
+    }
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Izin lokasi ditolak')));
+        return;
+      }
+    }
+
+    setState(() => _isLoading = true);
+    try {
+      Position position = await Geolocator.getCurrentPosition();
+      setState(() {
+        _lat = position.latitude;
+        _lng = position.longitude;
+        _locationCtrl.text = "Lokasi terdeteksi secara presisi";
+      });
+      
+      _mapController.move(LatLng(_lat!, _lng!), 15);
+
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Lokasi berhasil diambil!'), backgroundColor: Colors.green));
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal mengambil lokasi: $e')));
+    } finally {
+      setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -64,7 +142,6 @@ class _ReportFoundScreenState extends State<ReportFoundScreen> {
           padding: const EdgeInsets.all(20),
           child: Column(
             children: [
-              // Step indicator
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -79,7 +156,7 @@ class _ReportFoundScreenState extends State<ReportFoundScreen> {
                   value: _currentStep / 2,
                   minHeight: 8,
                   backgroundColor: AppTheme.inputBorder,
-                  valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primary),
+                  valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primary),
                 ),
               ),
               const SizedBox(height: 24),
@@ -135,14 +212,75 @@ class _ReportFoundScreenState extends State<ReportFoundScreen> {
         const SizedBox(height: 16),
         AppTextField(label: 'Kategori', hint: 'Pilih kategori', controller: _categoryCtrl, validator: (v) => v?.isEmpty ?? true ? 'Wajib diisi' : null),
         const SizedBox(height: 16),
-        AppTextField(label: 'Tanggal Ditemukan', hint: 'Pilih tanggal', controller: _dateCtrl, validator: (v) => v?.isEmpty ?? true ? 'Wajib diisi' : null),
+        AppTextField(label: 'Tanggal Ditemukan', hint: 'Pilih tanggal', controller: _dateCtrl, validator: (v) => v?.isEmpty ?? true ? 'Wajib diisi' : null, suffixWidget: IconButton(icon: const Icon(Icons.calendar_today_rounded, size: 20), onPressed: _selectDate)),
         const SizedBox(height: 16),
-        AppTextField(label: 'Lokasi Penemuan', hint: 'Misal: Parkir Teknik Lt. 2', controller: _locationCtrl, validator: (v) => v?.isEmpty ?? true ? 'Wajib diisi' : null),
+        AppTextField(label: 'Lokasi Penemuan', hint: 'Misal: Parkir Teknik Lt. 2', controller: _locationCtrl, validator: (v) => v?.isEmpty ?? true ? 'Wajib diisi' : null, suffixWidget: IconButton(icon: const Icon(Icons.my_location_rounded, size: 20), onPressed: _getCurrentLocation)),
         const SizedBox(height: 16),
+
+        // INTERACTIVE MAP (OpenStreetMap)
         Container(
-          width: double.infinity, height: 120,
-          decoration: BoxDecoration(border: Border.all(color: AppTheme.inputBorder, width: 2), borderRadius: BorderRadius.circular(8), color: AppTheme.inputFill),
-          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.image_outlined, size: 40, color: AppTheme.textGrey), const SizedBox(height: 8), Text('Tambah Foto', style: TextStyle(color: AppTheme.textGrey, fontSize: 13))]),
+          height: 200,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppTheme.inputBorder),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: FlutterMap(
+              mapController: _mapController,
+              options: MapOptions(
+                initialCenter: const LatLng(-6.9147, 107.6098),
+                initialZoom: 13,
+                onTap: (tapPosition, point) {
+                  setState(() {
+                    _lat = point.latitude;
+                    _lng = point.longitude;
+                    _locationCtrl.text = "Pin diletakkan di peta";
+                  });
+                },
+              ),
+              children: [
+                TileLayer(
+                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'com.campuslost.app',
+                ),
+                if (_lat != null && _lng != null)
+                  MarkerLayer(
+                    markers: [
+                      Marker(
+                        point: LatLng(_lat!, _lng!),
+                        width: 40,
+                        height: 40,
+                        child: const Icon(Icons.location_on, color: Colors.red, size: 40),
+                      ),
+                    ],
+                  ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        GestureDetector(
+          onTap: _pickImage,
+          child: Container(
+            width: double.infinity, height: 160,
+            decoration: BoxDecoration(
+              border: Border.all(color: AppTheme.inputBorder, width: 2), 
+              borderRadius: BorderRadius.circular(8), 
+              color: AppTheme.inputFill,
+              image: _imageBytes != null ? DecorationImage(image: MemoryImage(_imageBytes!), fit: BoxFit.cover) : null,
+            ),
+            child: _imageBytes == null ? Column(
+              mainAxisAlignment: MainAxisAlignment.center, 
+              children: [
+                Icon(Icons.image_outlined, size: 40, color: AppTheme.textGrey), 
+                const SizedBox(height: 8), 
+                Text('Tambah Foto', style: const TextStyle(color: AppTheme.textGrey, fontSize: 13))
+              ],
+            ) : null,
+          ),
         ),
       ],
     );
@@ -163,10 +301,9 @@ class _ReportFoundScreenState extends State<ReportFoundScreen> {
         const SizedBox(height: 24),
         const Text('Status Penyimpanan Saat Ini', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textDark)),
         const SizedBox(height: 8),
-        Text('Di mana barang temuan ini berada sekarang?', style: TextStyle(fontSize: 12, color: AppTheme.textGrey)),
+        const Text('Di mana barang temuan ini berada sekarang?', style: TextStyle(fontSize: 12, color: AppTheme.textGrey)),
         const SizedBox(height: 12),
 
-        // Pilihan Status Penyimpanan
         Container(
           decoration: BoxDecoration(border: Border.all(color: AppTheme.inputBorder), borderRadius: BorderRadius.circular(8)),
           child: Column(
@@ -197,6 +334,11 @@ class _ReportFoundScreenState extends State<ReportFoundScreen> {
     setState(() => _isLoading = true);
 
     try {
+      String? imageUrl;
+      if (_imageBytes != null) {
+        imageUrl = await _reportService.uploadReportImage(_imageBytes!);
+      }
+
       await _reportService.createFoundReport(
         itemName: _itemNameCtrl.text.trim(),
         category: _categoryCtrl.text.trim(),
@@ -204,6 +346,9 @@ class _ReportFoundScreenState extends State<ReportFoundScreen> {
         location: _locationCtrl.text.trim(),
         description: _descriptionCtrl.text.trim(),
         storageStatus: _storageStatus,
+        imageUrl: imageUrl,
+        lat: _lat,
+        lng: _lng,
       );
 
       if (mounted) {
