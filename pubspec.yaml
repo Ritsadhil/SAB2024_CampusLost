@@ -21,7 +21,10 @@ dependencies:
   geolocator: ^13.0.1
   url_launcher: ^6.3.1
   flutter_map: ^7.0.2
-  latlong2: 0.9.1
+  latlong2: ^0.9.1
+
+dependency_overrides:
+  latlong2: ^0.10.1
 
 dev_dependencies:
   flutter_test:
