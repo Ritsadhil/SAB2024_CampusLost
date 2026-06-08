@@ -230,7 +230,7 @@ class _ReportFoundScreenState extends State<ReportFoundScreen> {
             child: FlutterMap(
               mapController: _mapController,
               options: MapOptions(
-                initialCenter: const LatLng(-6.9147, 107.6098),
+                initialCenter: LatLng(-6.9147, 107.6098),
                 initialZoom: 13,
                 onTap: (tapPosition, point) {
                   setState(() {
