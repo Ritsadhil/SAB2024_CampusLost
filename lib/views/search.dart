@@ -14,9 +14,11 @@ class SearchScreen extends StatefulWidget {
 class _SearchScreenState extends State<SearchScreen> {
   late TextEditingController _searchCtrl;
   String _selectedCategory = 'Semua';
+  String _selectedStatus = 'Semua';
   late ReportService _reportService;
 
   final List<String> categories = ['Semua', 'Elektronik', 'Dompet/Tas', 'Kunci', 'Lainnya'];
+  final List<String> statuses = ['Semua', 'HILANG', 'DITEMUKAN'];
 
   @override
   void initState() {
@@ -120,6 +122,43 @@ class _SearchScreenState extends State<SearchScreen> {
                 ),
               ),
             ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: List.generate(
+                    statuses.length,
+                    (index) {
+                      final status = statuses[index];
+                      final isSelected = _selectedStatus == status;
+                      return Padding(
+                        padding: EdgeInsets.only(right: index < statuses.length - 1 ? 8 : 0),
+                        child: GestureDetector(
+                          onTap: () => setState(() => _selectedStatus = status),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: isSelected ? Colors.blue.shade100 : Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: isSelected ? Colors.blue : AppTheme.inputBorder),
+                            ),
+                            child: Text(
+                              status,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: isSelected ? Colors.blue.shade900 : AppTheme.textGrey,
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ),
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
                 stream: _reportService.searchReportsStream(_searchCtrl.text),
@@ -146,9 +185,13 @@ class _SearchScreenState extends State<SearchScreen> {
                   List<QueryDocumentSnapshot> filteredDocs = allDocs.where((doc) {
                     final data = doc.data() as Map<String, dynamic>;
                     final category = (data['category'] as String? ?? 'Lainnya').trim().toLowerCase();
-                    final selected = _selectedCategory.trim().toLowerCase();
+                    final selectedCat = _selectedCategory.trim().toLowerCase();
+                    final status = data['status'] as String? ?? 'HILANG';
                     
-                    return _selectedCategory == 'Semua' || category == selected;
+                    final matchesCategory = _selectedCategory == 'Semua' || category == selectedCat;
+                    final matchesStatus = _selectedStatus == 'Semua' || status.toUpperCase() == _selectedStatus.toUpperCase();
+                    
+                    return matchesCategory && matchesStatus;
                   }).toList();
 
                   if (filteredDocs.isEmpty) {

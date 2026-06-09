@@ -4,6 +4,8 @@ import 'package:geolocator/geolocator.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'dart:typed_data';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import '../theme/app_theme.dart';
 import '../theme/widgets.dart';
 import '../services/report_service.dart';
@@ -38,6 +40,11 @@ class _ReportLostScreenState extends State<ReportLostScreen> {
   XFile? _selectedImageFile;
   Uint8List? _imageBytes;
   
+  // Category Logic
+  String? _selectedCategory;
+  final List<String> _categoryOptions = ['Elektronik', 'Dompet/Tas', 'Kunci', 'Lainnya'];
+  final TextEditingController _otherCategoryCtrl = TextEditingController();
+
   // Location
   double? _lat;
   double? _lng;
@@ -56,6 +63,23 @@ class _ReportLostScreenState extends State<ReportLostScreen> {
     _locationCtrl = TextEditingController();
     _descriptionCtrl = TextEditingController();
     _privateDescriptionCtrl = TextEditingController();
+  }
+
+  Future<void> _getAddressFromLatLng(double lat, double lng) async {
+    try {
+      final url = Uri.parse('https://nominatim.openstreetmap.org/reverse?format=json&lat=$lat&lon=$lng&zoom=18&addressdetails=1');
+      final response = await http.get(url, headers: {'User-Agent': 'CampusLostApp'});
+      
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final displayName = data['display_name'];
+        setState(() {
+          _locationCtrl.text = displayName ?? "Alamat tidak ditemukan";
+        });
+      }
+    } catch (e) {
+      print("Error Reverse Geocoding: $e");
+    }
   }
 
   Future<void> _pickImage() async {
@@ -108,8 +132,9 @@ class _ReportLostScreenState extends State<ReportLostScreen> {
       setState(() {
         _lat = position.latitude;
         _lng = position.longitude;
-        _locationCtrl.text = "Lokasi terdeteksi secara presisi";
       });
+      
+      await _getAddressFromLatLng(_lat!, _lng!);
       
       _mapController.move(LatLng(_lat!, _lng!), 15);
       
@@ -129,6 +154,7 @@ class _ReportLostScreenState extends State<ReportLostScreen> {
     _locationCtrl.dispose();
     _descriptionCtrl.dispose();
     _privateDescriptionCtrl.dispose();
+    _otherCategoryCtrl.dispose();
     for (var ctrl in _sqQuestionCtrls) { ctrl.dispose(); }
     for (var ctrl in _sqAnswerCtrls) { ctrl.dispose(); }
     super.dispose();
@@ -221,8 +247,33 @@ class _ReportLostScreenState extends State<ReportLostScreen> {
         const SizedBox(height: 20),
         AppTextField(label: 'Nama Barang', hint: 'Misal: iPhone 13 Pro Biru', controller: _itemNameCtrl, validator: (v) => (v == null || v.isEmpty) ? 'Wajib diisi' : null),
         const SizedBox(height: 16),
-        AppTextField(label: 'Kategori', hint: 'Pilih kategori barang', controller: _categoryCtrl, validator: (v) => (v == null || v.isEmpty) ? 'Wajib diisi' : null),
+        
+        // Category Dropdown
+        const Text('Kategori', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppTheme.textDark)),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            color: AppTheme.inputFill,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppTheme.inputBorder),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: _selectedCategory,
+              hint: const Text('Pilih kategori', style: TextStyle(color: AppTheme.textGrey, fontSize: 14)),
+              isExpanded: true,
+              items: _categoryOptions.map((cat) => DropdownMenuItem(value: cat, child: Text(cat, style: const TextStyle(fontSize: 14)))).toList(),
+              onChanged: (val) => setState(() => _selectedCategory = val),
+            ),
+          ),
+        ),
+        if (_selectedCategory == 'Lainnya') ...[
+          const SizedBox(height: 12),
+          AppTextField(label: 'Kategori Lainnya', hint: 'Sebutkan kategori...', controller: _otherCategoryCtrl, validator: (v) => (v == null || v.isEmpty) ? 'Wajib diisi' : null),
+        ],
         const SizedBox(height: 16),
+
         AppTextField(label: 'Tanggal Hilang', hint: 'Pilih tanggal', controller: _dateCtrl, validator: (v) => (v == null || v.isEmpty) ? 'Wajib diisi' : null, suffixWidget: IconButton(icon: const Icon(Icons.calendar_today_rounded, size: 20), onPressed: _selectDate)),
         const SizedBox(height: 16),
         AppTextField(label: 'Lokasi Hilang', hint: 'Misal: Gedung Balkiromati Lt. 2', controller: _locationCtrl, validator: (v) => (v == null || v.isEmpty) ? 'Wajib diisi' : null, suffixWidget: IconButton(icon: const Icon(Icons.my_location_rounded, size: 20), onPressed: _getCurrentLocation)),
@@ -247,8 +298,8 @@ class _ReportLostScreenState extends State<ReportLostScreen> {
                   setState(() {
                     _lat = point.latitude;
                     _lng = point.longitude;
-                    _locationCtrl.text = "Pin diletakkan di peta";
                   });
+                  _getAddressFromLatLng(point.latitude, point.longitude);
                 },
               ),
               children: [
@@ -415,7 +466,7 @@ class _ReportLostScreenState extends State<ReportLostScreen> {
 
       await _reportService.createLostReport(
         itemName: _itemNameCtrl.text.trim(),
-        category: _categoryCtrl.text.trim(),
+        category: _selectedCategory == 'Lainnya' ? _otherCategoryCtrl.text.trim() : _selectedCategory!,
         date: _dateCtrl.text.trim(),
         location: _locationCtrl.text.trim(),
         publicDescription: _descriptionCtrl.text.trim(),
